@@ -1,0 +1,5 @@
+# Studio87 dispatch handoff artefacts — local only, not for commit.
+print-*.md
+inbox-*.md
+outbox-*.md
+*.md.tmp
