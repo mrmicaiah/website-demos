@@ -303,7 +303,8 @@ a {
   position: absolute;
   inset: 0;
   /* Layered gradients evoking a dark mountain landscape at dusk.
-     Swap this for a real banner via the assets/banner.png slot. */
+     To use a real banner image instead, set a background-image here
+     (e.g. url("assets/banner.png")) over these gradients. */
   background:
     radial-gradient(120% 80% at 50% 8%, rgba(194, 161, 95, 0.28), transparent 55%),
     linear-gradient(180deg, #241c12 0%, #1b1610 45%, #120e09 100%),
@@ -328,7 +329,8 @@ a {
   z-index: 1;
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: clamp(56px, 9vw, 96px) 20px clamp(48px, 7vw, 72px);
+  /* Symmetric top/bottom so the lockup sits as a balanced, centered band. */
+  padding: clamp(64px, 9vw, 104px) 20px;
   text-align: center;
 }
 
@@ -354,24 +356,6 @@ a {
   font-size: clamp(0.8rem, 2vw, 1rem);
   color: var(--brass);
   margin-bottom: 30px;
-}
-
-/* Banner replacement slot */
-.banner-slot {
-  margin: 40px auto 0;
-  max-width: 760px;
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 24px;
-  border: 2px dashed rgba(194, 161, 95, 0.6);
-  border-radius: var(--radius);
-  color: var(--brass);
-  font-size: 0.82rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- Product media tiles (stylized placeholders) ---------- */
