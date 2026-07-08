@@ -4,8 +4,8 @@ Bound to Studio87 on 2026-07-08.
 
 ## Project intent
 
-_Describe what this project is for. The manager will update this section as understanding develops._
+A showcase repository of self-contained static demo websites, served via GitHub Pages, with a data-driven gallery landing page indexing them.
 
 ## Current focus
 
-_The manager updates this with the current work area at the end of each session._
+Initial scaffold complete — gallery + manifest + first example demo (hello-showroom).

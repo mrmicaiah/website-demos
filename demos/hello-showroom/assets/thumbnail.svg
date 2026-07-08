@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Hello Showroom thumbnail">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d8bff"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#g)"/>
+  <circle cx="520" cy="80" r="120" fill="#ffffff" opacity="0.12"/>
+  <circle cx="90" cy="300" r="90" fill="#ffffff" opacity="0.10"/>
+  <text x="48" y="180" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="52" font-weight="700" fill="#ffffff">Hello</text>
+  <text x="48" y="238" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="52" font-weight="700" fill="#ffffff" opacity="0.85">Showroom</text>
+</svg>

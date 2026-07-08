@@ -1,0 +1,8 @@
+[
+  {
+    "slug": "hello-showroom",
+    "name": "Hello Showroom",
+    "description": "A clean single-page hero landing with a heading, subtext, and call-to-action.",
+    "thumbnail": "./demos/hello-showroom/assets/thumbnail.svg"
+  }
+]
