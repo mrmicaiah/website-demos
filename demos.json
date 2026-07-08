@@ -10,5 +10,11 @@
     "name": "The Faithful Shepherd Apparel Co.",
     "description": "Shop-first storefront mockup for a premium Christian lifestyle apparel brand.",
     "thumbnail": "./demos/faithful-shepherd/assets/thumbnail.svg"
+  },
+  {
+    "slug": "faithful-shepherd-b",
+    "name": "The Faithful Shepherd — Concept 2 (Editorial)",
+    "description": "Alternate editorial/lookbook design — banner-led, light theme.",
+    "thumbnail": "./demos/faithful-shepherd-b/assets/thumbnail.svg"
   }
 ]
