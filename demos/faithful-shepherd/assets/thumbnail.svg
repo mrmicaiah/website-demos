@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="The Faithful Shepherd Apparel Co. thumbnail">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2318"/>
+      <stop offset="0.55" stop-color="#1b1610"/>
+      <stop offset="1" stop-color="#120e09"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#c2a15f" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#c2a15f" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <ellipse cx="320" cy="150" rx="220" ry="90" fill="url(#glow)"/>
+  <circle cx="320" cy="120" r="34" fill="#e9ddc5" opacity="0.85"/>
+  <!-- ridgelines -->
+  <path d="M0 300 L120 235 L230 285 L340 220 L470 290 L560 240 L640 285 L640 360 L0 360 Z" fill="#241c12"/>
+  <path d="M0 330 L150 275 L300 320 L430 270 L560 315 L640 290 L640 360 L0 360 Z" fill="#171109"/>
+  <text x="320" y="200" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" letter-spacing="6" fill="#c2a15f">PSALM 23:3</text>
+  <text x="320" y="250" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="40" letter-spacing="3" fill="#e9ddc5">THE FAITHFUL</text>
+  <text x="320" y="292" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="40" letter-spacing="3" fill="#e9ddc5">SHEPHERD</text>
+</svg>

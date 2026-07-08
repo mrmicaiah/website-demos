@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Faithful Shepherd Apparel Company — Premium Christian Lifestyle Apparel</title>
+  <meta
+    name="description"
+    content="Premium Christian lifestyle apparel inspired by faith, purpose, and the Great Shepherd. Faith · Family · Freedom · Purpose."
+  />
+  <link rel="icon" href="./assets/thumbnail.svg" type="image/svg+xml" />
+
+  <!-- Heritage typography: Cinzel for display, Work Sans for body/UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- 1. Announcement bar -->
+  <div class="announce">
+    <div class="announce__inner">
+      Free shipping on orders over $75&nbsp;&nbsp;·&nbsp;&nbsp;Faith · Family · Freedom · Purpose
+    </div>
+  </div>
+
+  <!-- 2. Sticky header / nav -->
+  <header class="site-header" id="top">
+    <div class="site-header__inner">
+      <a class="logo" href="#top" aria-label="The Faithful Shepherd Apparel Company home">
+        <span class="logo__line1">THE FAITHFUL SHEPHERD</span>
+        <span class="logo__line2">APPAREL COMPANY</span>
+      </a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="#products">Shop</a>
+        <a href="#story">Our Story</a>
+        <a href="#story">Faith</a>
+        <a href="#join">Contact</a>
+      </nav>
+
+      <button class="cart-btn" id="cartOpen" aria-label="Open cart" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+          <circle cx="9" cy="20" r="1.4" />
+          <circle cx="18" cy="20" r="1.4" />
+          <path d="M2 3h3l2.2 12.4a1.5 1.5 0 0 0 1.5 1.2h8.3a1.5 1.5 0 0 0 1.5-1.2L21 7H6" />
+        </svg>
+        <span class="cart-count" id="cartCount" aria-live="polite">0</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 3. Hero -->
+    <section class="hero" aria-label="Brand hero">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="hero__content">
+        <p class="eyebrow eyebrow--gold">Psalm 23:3</p>
+        <h1 class="hero__title">
+          <span>THE FAITHFUL</span>
+          <span>SHEPHERD</span>
+        </h1>
+        <p class="hero__tagline">Faith · Family · Freedom · Purpose</p>
+        <a href="#products" class="btn btn--primary btn--lg" data-scroll>Shop the Collection</a>
+
+        <!-- ============================================================
+             BANNER IMAGE SLOT
+             Replace this CSS-driven hero with your real banner artwork:
+             drop the file at assets/banner.png and swap this block (or
+             set it as the background of .hero__bg in style.css).
+             ============================================================ -->
+        <div class="banner-slot" role="img" aria-label="Banner image placeholder">
+          BANNER IMAGE — drop assets/banner.png here
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Featured bestseller band -->
+    <section class="featured" aria-label="Featured bestseller">
+      <div class="featured__inner">
+        <div class="featured__media product-media" data-art="shepherd-tee" aria-hidden="true">
+          <span class="product-media__name">The Shepherd Tee</span>
+        </div>
+        <div class="featured__body">
+          <span class="badge badge--brass">Bestseller</span>
+          <h2 class="featured__title">The Shepherd Tee</h2>
+          <p class="featured__desc">
+            Our signature heavyweight cotton tee, bearing the mountain-and-shepherd
+            lockup. Built to be worn, weathered, and worn again — a quiet testimony
+            in every thread.
+          </p>
+          <div class="featured__buy">
+            <span class="price price--lg">$34</span>
+            <button class="btn btn--primary" data-add="p1">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Product grid -->
+    <section class="products" id="products" aria-label="Shop the collection">
+      <div class="section-head">
+        <p class="eyebrow">The Collection</p>
+        <h2 class="section-title">Wear Your Faith Well</h2>
+      </div>
+      <div class="grid" id="productGrid">
+        <!-- Cards injected by script.js from the shared PRODUCTS data -->
+      </div>
+    </section>
+
+    <!-- 6. Brand story band -->
+    <section class="story" id="story" aria-label="Our story">
+      <div class="story__inner">
+        <p class="eyebrow eyebrow--gold">Psalm 23:3</p>
+        <blockquote class="verse">
+          &ldquo;He restores my soul; He leads me in the paths of righteousness
+          for His name&rsquo;s sake.&rdquo;
+        </blockquote>
+        <p class="story__mission">
+          The Faithful Shepherd Apparel Company is a premium Christian lifestyle
+          brand creating high-quality apparel inspired by faith, purpose, and the
+          Great Shepherd. Rooted in biblical truth and timeless design.
+        </p>
+        <ul class="pillars">
+          <li><span class="pillars__icon" aria-hidden="true">✝</span>Faith</li>
+          <li><span class="pillars__icon" aria-hidden="true">⌂</span>Family</li>
+          <li><span class="pillars__icon" aria-hidden="true">★</span>Freedom</li>
+          <li><span class="pillars__icon" aria-hidden="true">⚑</span>Purpose</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7. Trust / benefits strip -->
+    <section class="trust" aria-label="Why shop with us">
+      <ul class="trust__list">
+        <li>
+          <span class="trust__icon" aria-hidden="true">◈</span>
+          <span>Premium Heavyweight Quality</span>
+        </li>
+        <li>
+          <span class="trust__icon" aria-hidden="true">❦</span>
+          <span>Ethically Made</span>
+        </li>
+        <li>
+          <span class="trust__icon" aria-hidden="true">★</span>
+          <span>Ships From The USA</span>
+        </li>
+        <li>
+          <span class="trust__icon" aria-hidden="true">✝</span>
+          <span>Faith-Driven</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 8. Email capture band -->
+    <section class="join" id="join" aria-label="Join the flock">
+      <div class="join__inner">
+        <h2 class="join__title">Join the Flock</h2>
+        <p class="join__copy">
+          New drops, restocks, and words of encouragement — sent to your inbox.
+          No noise, just the good stuff.
+        </p>
+        <form class="join__form" id="joinForm" novalidate>
+          <label class="sr-only" for="joinEmail">Email address</label>
+          <input
+            type="email"
+            id="joinEmail"
+            name="email"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+          />
+          <button type="submit" class="btn btn--primary">Subscribe</button>
+        </form>
+        <p class="join__thanks" id="joinThanks" role="status" hidden>
+          Thank you for joining the flock — check your inbox soon.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 9. Footer -->
+  <footer class="site-footer" aria-label="Footer">
+    <div class="site-footer__inner">
+      <div class="footer-brand">
+        <span class="footer-brand__name">THE FAITHFUL SHEPHERD</span>
+        <span class="footer-brand__sub">APPAREL COMPANY</span>
+        <p class="footer-brand__verse">
+          &ldquo;He restores my soul; He leads me in the paths of righteousness
+          for His name&rsquo;s sake.&rdquo; — Psalm 23:3
+        </p>
+      </div>
+
+      <nav class="footer-col" aria-label="Shop">
+        <h3>Shop</h3>
+        <a href="#products">All Products</a>
+        <a href="#products">Tees</a>
+        <a href="#products">Hoodies &amp; Fleece</a>
+        <a href="#products">Headwear</a>
+      </nav>
+
+      <nav class="footer-col" aria-label="Company">
+        <h3>Company</h3>
+        <a href="#story">Our Story</a>
+        <a href="#story">Our Faith</a>
+        <a href="#join">Contact</a>
+        <a href="#join">Wholesale</a>
+      </nav>
+
+      <div class="footer-col">
+        <h3>Follow</h3>
+        <div class="socials">
+          <a href="#" aria-label="Instagram (placeholder)"><span aria-hidden="true">◎</span></a>
+          <a href="#" aria-label="Facebook (placeholder)"><span aria-hidden="true">f</span></a>
+          <a href="#" aria-label="X (placeholder)"><span aria-hidden="true">✕</span></a>
+          <a href="#" aria-label="YouTube (placeholder)"><span aria-hidden="true">▷</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="site-footer__bar">
+      © 2026 The Faithful Shepherd Apparel Company. All rights reserved.
+    </div>
+  </footer>
+
+  <!-- Cart drawer + overlay -->
+  <div class="overlay" id="overlay" hidden></div>
+  <aside
+    class="drawer"
+    id="cartDrawer"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Shopping cart"
+    aria-hidden="true"
+  >
+    <div class="drawer__head">
+      <h2 class="drawer__title">Your Cart</h2>
+      <button class="drawer__close" id="cartClose" aria-label="Close cart">&times;</button>
+    </div>
+    <div class="drawer__items" id="cartItems">
+      <!-- items injected -->
+    </div>
+    <p class="drawer__empty" id="cartEmpty">Your cart is empty. Add something worth wearing.</p>
+    <div class="drawer__foot">
+      <div class="drawer__subtotal">
+        <span>Subtotal</span>
+        <span id="cartSubtotal">$0</span>
+      </div>
+      <button class="btn btn--primary btn--block" id="checkoutBtn">Checkout</button>
+      <p class="drawer__note" id="checkoutNote" hidden>Demo store — checkout is not enabled.</p>
+      <p class="drawer__fineprint">Free shipping on orders over $75.</p>
+    </div>
+  </aside>
+
+  <script src="./script.js"></script>
+</body>
+</html>

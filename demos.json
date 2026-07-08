@@ -4,5 +4,11 @@
     "name": "Hello Showroom",
     "description": "A clean single-page hero landing with a heading, subtext, and call-to-action.",
     "thumbnail": "./demos/hello-showroom/assets/thumbnail.svg"
+  },
+  {
+    "slug": "faithful-shepherd",
+    "name": "The Faithful Shepherd Apparel Co.",
+    "description": "Shop-first storefront mockup for a premium Christian lifestyle apparel brand.",
+    "thumbnail": "./demos/faithful-shepherd/assets/thumbnail.svg"
   }
 ]
