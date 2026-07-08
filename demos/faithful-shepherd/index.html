@@ -55,16 +55,18 @@
   </header>
 
   <main>
-    <!-- 3. Hero -->
+    <!-- 3. Hero — real brand banner (hosted on Cloudinary) + CTA -->
     <section class="hero" aria-label="Brand hero">
-      <div class="hero__bg" aria-hidden="true"></div>
-      <div class="hero__content">
-        <p class="eyebrow eyebrow--gold">Psalm 23:3</p>
-        <h1 class="hero__title">
-          <span>THE FAITHFUL</span>
-          <span>SHEPHERD</span>
-        </h1>
-        <p class="hero__tagline">Faith · Family · Freedom · Purpose</p>
+      <img
+        class="hero__banner"
+        src="https://res.cloudinary.com/dxzw1zwez/image/upload/f_auto,q_auto,w_1600/v1783509470/B53BEBE4-0606-4DED-A0A2-2EE02F718C53_yll7ws.png"
+        alt="The Faithful Shepherd Apparel Company — Psalm 23:3 · Faith, Family, Freedom, Purpose"
+        width="1774"
+        height="887"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <div class="hero__cta">
         <a href="#products" class="btn btn--primary btn--lg" data-scroll>Shop the Collection</a>
       </div>
     </section>
