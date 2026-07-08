@@ -294,25 +294,70 @@ a {
 
 /* ---------- 3. Hero ---------- */
 .hero {
-  /* Espresso backdrop so the banner's dark/letterboxed edges blend in. */
+  position: relative;
+  overflow: hidden;
   background: var(--espresso);
   border-bottom: 1px solid var(--line);
 }
 
-.hero__banner {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* Full lockup always visible — never cropped. Aspect ratio reserves
-     space to prevent layout shift before the image loads. */
-  aspect-ratio: 1774 / 887;
-  background: var(--espresso);
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  /* Layered gradients suggesting a dark ridgeline at dusk — subtle, premium. */
+  background:
+    radial-gradient(120% 85% at 50% 6%, rgba(194, 161, 95, 0.26), transparent 55%),
+    linear-gradient(180deg, #241c12 0%, #1b1610 48%, #120e09 100%),
+    /* back ridge */
+    linear-gradient(115deg, transparent 46%, rgba(0, 0, 0, 0.5) 47%) 0 78% / 60% 24% no-repeat,
+    linear-gradient(245deg, transparent 46%, rgba(0, 0, 0, 0.5) 47%) 100% 78% / 60% 24% no-repeat,
+    /* front ridge */
+    linear-gradient(125deg, transparent 44%, rgba(0, 0, 0, 0.78) 45%) 0 100% / 55% 18% no-repeat,
+    linear-gradient(235deg, transparent 44%, rgba(0, 0, 0, 0.78) 45%) 100% 100% / 55% 18% no-repeat;
 }
 
-.hero__cta {
+.hero__bg::after {
+  /* soft vignette for depth */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(0, 0, 0, 0.5));
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  /* Vertically tight so the featured product band sits close to the fold. */
+  padding: clamp(72px, 11vw, 120px) 20px;
   text-align: center;
-  /* Comfortable breathing room so the CTA reads as intentional. */
-  padding: clamp(30px, 5vw, 52px) 20px clamp(34px, 5vw, 58px);
+}
+
+.hero__headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.06;
+  font-size: clamp(2.2rem, 6.5vw, 4rem);
+  color: var(--cream);
+  margin: 16px 0;
+  text-shadow: 0 3px 26px rgba(0, 0, 0, 0.55);
+}
+
+.hero__support {
+  font-family: var(--font-body);
+  color: var(--cream-dim);
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
+  max-width: 46ch;
+  margin: 0 auto 30px;
+}
+
+.hero__ship {
+  margin-top: 18px;
+  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(233, 221, 197, 0.6);
 }
 
 /* ---------- Product media tiles (stylized placeholders) ---------- */
@@ -534,66 +579,28 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.story__banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Full artwork always visible — never cropped. Reserves space to
+     prevent layout shift. */
+  aspect-ratio: 1774 / 887;
+  background: var(--espresso);
+}
+
 .story__inner {
   max-width: 860px;
   margin: 0 auto;
-  padding: clamp(56px, 8vw, 92px) 20px;
+  padding: clamp(48px, 7vw, 80px) 20px;
   text-align: center;
-}
-
-.verse {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.5rem, 4vw, 2.4rem);
-  line-height: 1.35;
-  letter-spacing: 0.02em;
-  color: var(--cream);
-  margin: 18px auto 28px;
-  max-width: 20ch;
 }
 
 .story__mission {
   color: var(--cream-dim);
   max-width: 62ch;
-  margin: 0 auto 40px;
-  font-size: 1.02rem;
-}
-
-.pillars {
-  list-style: none;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: clamp(18px, 5vw, 54px);
-}
-
-.pillars li {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--cream);
-  position: relative;
-}
-
-.pillars li:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  right: calc(-1 * clamp(9px, 2.5vw, 27px));
-  top: 50%;
-  height: 22px;
-  width: 1px;
-  background: var(--brass);
-  opacity: 0.5;
-  transform: translateY(-50%);
-}
-
-.pillars__icon {
-  color: var(--brass);
-  font-size: 1.2rem;
+  margin: 0 auto;
+  font-size: clamp(1.02rem, 2vw, 1.15rem);
 }
 
 /* ---------- 7. Trust strip ---------- */

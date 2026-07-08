@@ -55,19 +55,17 @@
   </header>
 
   <main>
-    <!-- 3. Hero — real brand banner (hosted on Cloudinary) + CTA -->
+    <!-- 3. Hero — product-forward sales hero (CSS mountain-dusk gradient + live text) -->
     <section class="hero" aria-label="Brand hero">
-      <img
-        class="hero__banner"
-        src="https://res.cloudinary.com/dxzw1zwez/image/upload/f_auto,q_auto,w_1600/v1783509470/B53BEBE4-0606-4DED-A0A2-2EE02F718C53_yll7ws.png"
-        alt="The Faithful Shepherd Apparel Company — Psalm 23:3 · Faith, Family, Freedom, Purpose"
-        width="1774"
-        height="887"
-        loading="eager"
-        fetchpriority="high"
-      />
-      <div class="hero__cta">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="hero__content">
+        <p class="eyebrow eyebrow--gold">Psalm 23:3</p>
+        <h1 class="hero__headline">Wear What You Stand For</h1>
+        <p class="hero__support">
+          Premium faith-driven apparel — rooted in Scripture, made for the journey.
+        </p>
         <a href="#products" class="btn btn--primary btn--lg" data-scroll>Shop the Collection</a>
+        <p class="hero__ship">Free shipping on orders over $75</p>
       </div>
     </section>
 
@@ -104,25 +102,22 @@
       </div>
     </section>
 
-    <!-- 6. Brand story band -->
+    <!-- 6. Brand story band — full-width brand banner + mission narrative -->
     <section class="story" id="story" aria-label="Our story">
+      <img
+        class="story__banner"
+        src="https://res.cloudinary.com/dxzw1zwez/image/upload/f_auto,q_auto,w_1600/v1783509470/B53BEBE4-0606-4DED-A0A2-2EE02F718C53_yll7ws.png"
+        alt="The Faithful Shepherd Apparel Company — Psalm 23:3 · Faith, Family, Freedom, Purpose"
+        width="1774"
+        height="887"
+        loading="lazy"
+      />
       <div class="story__inner">
-        <p class="eyebrow eyebrow--gold">Psalm 23:3</p>
-        <blockquote class="verse">
-          &ldquo;He restores my soul; He leads me in the paths of righteousness
-          for His name&rsquo;s sake.&rdquo;
-        </blockquote>
         <p class="story__mission">
           The Faithful Shepherd Apparel Company is a premium Christian lifestyle
           brand creating high-quality apparel inspired by faith, purpose, and the
           Great Shepherd. Rooted in biblical truth and timeless design.
         </p>
-        <ul class="pillars">
-          <li><span class="pillars__icon" aria-hidden="true">✝</span>Faith</li>
-          <li><span class="pillars__icon" aria-hidden="true">⌂</span>Family</li>
-          <li><span class="pillars__icon" aria-hidden="true">★</span>Freedom</li>
-          <li><span class="pillars__icon" aria-hidden="true">⚑</span>Purpose</li>
-        </ul>
       </div>
     </section>
 
