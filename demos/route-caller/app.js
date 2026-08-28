@@ -211,20 +211,37 @@
     }
     for (const route of state.routes) {
       const total = Number(route.facility_count || 0);
+      // Lead with the usable list, not the raw total. visible_count comes from
+      // the server and therefore reflects the default hides — if she has
+      // restored a category on this device the in-route counters are the
+      // source of truth and this will read a little low.
+      const visible = Number(route.visible_count ?? total);
+      const hidden = Math.max(0, total - visible);
       const called = Number(route.called_count || 0);
+
       const item = document.createElement('button');
       item.className = 'route-item';
       item.type = 'button';
       item.innerHTML = `
         <h3></h3>
+        <div class="route-lead"></div>
         <div class="route-meta"></div>
         <div class="progress-track"><div class="progress-fill"></div></div>`;
       item.querySelector('h3').textContent = route.name;
-      item.querySelector('.route-meta').textContent = total
-        ? `${called} of ${total} called`
-        : 'No facilities found on this route';
+
+      const lead = item.querySelector('.route-lead');
+      const meta = item.querySelector('.route-meta');
+      if (!total) {
+        lead.textContent = 'No facilities found on this route';
+        meta.textContent = '';
+      } else {
+        lead.textContent = `${visible} place${visible === 1 ? '' : 's'} to call`;
+        meta.textContent =
+          `${called} of ${visible} called` +
+          (hidden ? ` · ${total} found, ${hidden} hidden` : '');
+      }
       item.querySelector('.progress-fill').style.width =
-        total ? `${Math.round((called / total) * 100)}%` : '0%';
+        visible ? `${Math.round((called / visible) * 100)}%` : '0%';
       item.addEventListener('click', () => openRoute(route.id));
       el.routeList.append(item);
     }

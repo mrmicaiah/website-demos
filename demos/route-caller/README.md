@@ -16,7 +16,7 @@ demos/route-caller/
                               0003_add_is_school_program.sql
                               0004_add_website_and_playground.sql
                               0005_add_route_corridor.sql
-    test/geo.test.mjs
+    test/geo.test.mjs  test/queries.test.mjs
 ```
 
 The frontend never sees an API key. Every Google call is proxied through the
@@ -151,10 +151,10 @@ static server (`npx serve demos/route-caller`).
 ## Tests
 
 ```bash
-cd demos/route-caller/api && node test/geo.test.mjs
+cd demos/route-caller/api && npm test
 ```
 
-95 checks over the corridor math and merge logic: polyline decoding against
+105 checks: 95 over the corridor math and merge logic: polyline decoding against
 Google's reference string, haversine distances against known values,
 perpendicular distance to a route, projection along it (including L-shaped
 routes and points that clamp past either end), route simplification, sampling,

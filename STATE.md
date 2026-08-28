@@ -44,6 +44,13 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
 - **Early-childhood boundary (2026-08-28, her second round)** — schools,
   colleges and private prep are hidden; early childhood never is. See the locked
   decision in `CONTEXT.md`. All three routes re-backfilled in place.
+- **Route cards lead with the usable list** — `GET /api/routes` returns
+  `visible_count` (total minus every hidden category) alongside `facility_count`,
+  and `called_count`/`flagged_count` count visible rows only so progress can
+  never read "12 of 10 called". Cards show "520 places to call" with a muted
+  "663 found, 143 hidden" beneath. Caveat: her category Restores live in
+  localStorage, so the server counts against the defaults — with a restore
+  active the landing card reads low and the in-route counters are the truth.
 - **Filters are assumed, not managed** — the four hide toggles are gone. Junk
   categories hide by default behind one collapsed "Hidden: N places (…)" line
   with Show and per-category Restore.
@@ -58,16 +65,18 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **95 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+- **105 tests passing** — `cd demos/route-caller/api && npm test` (95 unit checks
+  plus 10 that run the real route-list SQL against real SQLite built from the
+  real migrations, via `node:sqlite`).
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
 
 | route | id | corridor | rows | ≤10mi | ≤20mi | school | no-play | playground | visible | calls |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 25 | 2 | 0 | 189 | none |
-| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 101 | 9 | 9 | 526 | none |
-| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 36 | 5 | 0 | 149 | none |
+| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 25 | 2 | 0 | **187** | none |
+| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 101 | 9 | 9 | **520** | none |
+| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 36 | 5 | 0 | **150** | none |
 
 - Decatur and gatlingburg were re-ingested 2026-08-28 at the **30-mile corridor**
   and carry `corridor_m = 48280`. Both roughly tripled in size.

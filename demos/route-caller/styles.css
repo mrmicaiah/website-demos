@@ -71,7 +71,8 @@ body {
 }
 .route-item:active { transform: scale(0.995); }
 .route-item h3 { margin: 0 0 4px; font-size: 1.05rem; }
-.route-item .route-meta { color: var(--muted); font-size: 0.85rem; }
+.route-item .route-lead { font-size: 0.98rem; font-weight: 700; color: var(--green-action); }
+.route-item .route-meta { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
 .progress-track {
   margin-top: 10px;
   height: 6px;

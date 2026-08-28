@@ -8,6 +8,6 @@
     "deploy": "wrangler deploy",
     "migrate:local": "wrangler d1 migrations apply route-caller-db --local",
     "migrate:remote": "wrangler d1 migrations apply route-caller-db --remote",
-    "test": "node test/geo.test.mjs"
+    "test": "node test/geo.test.mjs && node test/queries.test.mjs"
   }
 }

@@ -20,6 +20,7 @@ import {
   partitionRetail,
   summarizeExcluded,
 } from './pipeline.js';
+import { ROUTE_LIST_SQL } from './queries.js';
 
 // Ingest wide, filter narrow. Her decision: store the full 30-mile corridor so
 // widening the view is a UI toggle rather than a re-search. Every facility keeps
@@ -268,16 +269,7 @@ async function createRoute(request, env) {
 }
 
 async function listRoutes(env) {
-  const { results } = await env.DB.prepare(
-    `SELECT r.*,
-            COUNT(f.id) AS facility_count,
-            SUM(CASE WHEN f.status != 'not_called' THEN 1 ELSE 0 END) AS called_count,
-            SUM(f.flagged) AS flagged_count
-       FROM routes r
-       LEFT JOIN facilities f ON f.route_id = r.id
-      GROUP BY r.id
-      ORDER BY r.created_at DESC`
-  ).all();
+  const { results } = await env.DB.prepare(ROUTE_LIST_SQL).all();
   return json({ routes: results || [] });
 }
 
