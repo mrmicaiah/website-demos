@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Route Caller thumbnail">
+  <rect width="640" height="360" fill="#F4F3EF"/>
+
+  <!-- route corridor -->
+  <path d="M70 330 C 130 250, 90 200, 150 150 S 250 90, 310 60"
+        fill="none" stroke="#DCEFE0" stroke-width="46" stroke-linecap="round"/>
+  <path d="M70 330 C 130 250, 90 200, 150 150 S 250 90, 310 60"
+        fill="none" stroke="#2E5B41" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="70" cy="330" r="8" fill="#2E5B41"/>
+  <circle cx="310" cy="60" r="8" fill="#2E5B41"/>
+  <circle cx="118" cy="243" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="132" cy="168" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="212" cy="118" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="268" cy="80" r="6.5" fill="#9AA39E" stroke="#fff" stroke-width="2.5"/>
+
+  <!-- header card -->
+  <rect x="330" y="34" width="272" height="96" rx="18" fill="#2E5B41"/>
+  <rect x="348" y="52" width="46" height="24" rx="8" fill="#1B3A5C"/>
+  <text x="371" y="69" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="13" fill="#ffffff">I-95</text>
+  <text x="404" y="70" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="16" fill="#ffffff">Call List</text>
+  <rect x="348" y="86" width="180" height="14" rx="7" fill="#4B7A5E"/>
+  <text x="348" y="120" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="13" fill="#CFE3D6">12 called · 15 left · 3 flagged</text>
+
+  <!-- facility cards -->
+  <g>
+    <rect x="330" y="144" width="272" height="82" rx="14" fill="#ffffff" stroke="#E3E2DC"/>
+    <rect x="344" y="160" width="18" height="18" rx="4" fill="#ffffff" stroke="#C9CEC9" stroke-width="2"/>
+    <text x="372" y="174" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="14" fill="#1B2320">Sunny Days Learning</text>
+    <rect x="524" y="160" width="62" height="20" rx="10" fill="#DCEFE0"/>
+    <text x="555" y="174" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#1F5335">114 kids</text>
+    <text x="372" y="191" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#6C7671">Ashland 23005 · CC-14882</text>
+    <rect x="372" y="199" width="156" height="18" rx="9" fill="#2F7D4F"/>
+    <text x="450" y="212" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#ffffff">(804) 555-0142</text>
+    <text x="546" y="214" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="17" fill="#E0A32E">★</text>
+  </g>
+  <g>
+    <rect x="330" y="238" width="272" height="82" rx="14" fill="#ffffff" stroke="#E3E2DC"/>
+    <rect x="344" y="254" width="18" height="18" rx="4" fill="#2F7D4F"/>
+    <path d="M348 263 l3.6 3.6 6.4 -6.6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="372" y="268" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="14" fill="#1B2320">Bright Beginnings</text>
+    <rect x="524" y="254" width="62" height="20" rx="10" fill="#DCEFE0"/>
+    <text x="555" y="268" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#1F5335">68 kids</text>
+    <text x="372" y="285" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#6C7671">Ladysmith 22546 · CC-20551</text>
+    <rect x="372" y="293" width="156" height="18" rx="9" fill="#2F7D4F"/>
+    <text x="450" y="306" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#ffffff">(540) 555-0117</text>
+    <text x="546" y="308" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="17" fill="#C9CEC9">☆</text>
+  </g>
+
+  <text x="38" y="52" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="26" fill="#1B2320">Route Caller</text>
+  <text x="38" y="76" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="13" fill="#6C7671">Child care within 10 mi of the drive</text>
+</svg>

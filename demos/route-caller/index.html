@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Route Caller — Child Care Call Lists</title>
+  <meta name="description" content="Build a drive-order call list of child care facilities within 10 miles of a sales route." />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- Landing: pick a route or start a new one -->
+  <section id="view-landing" class="view">
+    <header class="landing-head">
+      <p class="eyebrow">Route Caller</p>
+      <h1>Your call lists</h1>
+      <p class="lede">Child care facilities within 10 miles of a sales route, in drive order.</p>
+    </header>
+    <div id="route-list" class="route-list"></div>
+    <button id="btn-new-route" class="btn-primary btn-block">+ New route</button>
+  </section>
+
+  <!-- New route form -->
+  <section id="view-new" class="view" hidden>
+    <header class="landing-head">
+      <button class="link-back" data-nav="landing">← Back</button>
+      <h1>New route</h1>
+      <p class="lede">We'll find every child care facility within 10 miles of the drive.</p>
+    </header>
+    <form id="form-new-route" class="form-card">
+      <label>Route name
+        <input name="name" required placeholder="I-95 North — Tuesday" autocomplete="off" />
+      </label>
+      <label>Start address
+        <input name="start_address" required placeholder="Richmond, VA" autocomplete="off" />
+      </label>
+      <label>End address
+        <input name="end_address" required placeholder="Fredericksburg, VA" autocomplete="off" />
+      </label>
+      <button type="submit" class="btn-primary btn-block">Go</button>
+      <p id="new-route-error" class="form-error" hidden></p>
+    </form>
+    <div id="new-route-loading" class="loading" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Finding facilities along your route…</p>
+      <p class="loading-sub">Geocoding, routing, then searching the corridor. This takes a few seconds.</p>
+    </div>
+  </section>
+
+  <!-- Call list -->
+  <section id="view-list" class="view" hidden>
+    <header class="head-card">
+      <div class="head-top">
+        <button class="link-back light" data-nav="landing">←</button>
+        <span id="route-badge" class="badge">I-95</span>
+        <h1 id="route-title">Call List</h1>
+      </div>
+      <p id="route-subtitle" class="head-sub"></p>
+
+      <div class="head-controls">
+        <input id="search" type="search" placeholder="Search name, town, ZIP" autocomplete="off" />
+        <select id="filter-status" aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="not_called">Not called</option>
+          <option value="called">Called</option>
+          <option value="flagged">Flagged</option>
+          <option value="interested">Interested</option>
+        </select>
+      </div>
+
+      <div id="counters" class="counters"></div>
+
+      <div class="head-toggles">
+        <button id="toggle-sort" class="chip" type="button">Drive order</button>
+        <button id="toggle-franchise" class="chip" type="button" aria-pressed="true">Hide franchises</button>
+        <button id="toggle-home" class="chip" type="button" aria-pressed="true">Hide home daycares</button>
+        <button id="toggle-map" class="chip" type="button" aria-expanded="false">Map</button>
+      </div>
+    </header>
+
+    <div id="map-panel" class="map-panel" hidden><div id="map"></div></div>
+
+    <main id="cards" class="cards"></main>
+    <p id="empty-state" class="empty" hidden></p>
+
+    <footer class="foot-bar">
+      <span>Capacity = state licensed max. Verify on the call.</span>
+      <button id="btn-clear" class="link-clear" type="button">Clear</button>
+    </footer>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

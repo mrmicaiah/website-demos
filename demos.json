@@ -16,5 +16,11 @@
     "name": "The Faithful Shepherd — Concept 2 (Editorial)",
     "description": "Alternate editorial/lookbook design — banner-led, light theme.",
     "thumbnail": "./demos/faithful-shepherd-b/assets/thumbnail.svg"
+  },
+  {
+    "slug": "route-caller",
+    "name": "Route Caller",
+    "description": "Drive-order call list of child care facilities within 10 miles of a sales route — Leaflet map, Cloudflare Worker + D1 backend.",
+    "thumbnail": "./demos/route-caller/assets/thumbnail.svg"
   }
 ]

@@ -1,0 +1,12 @@
+name = "route-caller-api"
+main = "src/index.js"
+compatibility_date = "2025-05-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "route-caller-db"
+database_id = "dd62dbcf-fffd-4432-9e92-51422d16c194"
+migrations_dir = "migrations"
+
+# GOOGLE_MAPS_API_KEY is a secret, never a var:
+#   wrangler secret put GOOGLE_MAPS_API_KEY
