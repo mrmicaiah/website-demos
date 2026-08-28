@@ -5,5 +5,5 @@
 // Leave it empty and the UI runs in preview mode with clearly-labelled sample
 // data so the demo still renders. No API keys ever belong in this file.
 window.ROUTE_CALLER_CONFIG = {
-  apiBase: '',
+  apiBase: 'https://route-caller-api.micaiah-tasks.workers.dev',
 };
