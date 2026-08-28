@@ -366,3 +366,51 @@ body {
   .view { padding: 20px; }
   #map { height: 340px; }
 }
+
+/* ---------- hidden-rows bar ---------- */
+.hidden-bar {
+  margin: 12px 2px 0;
+  padding: 9px 12px;
+  background: #ECEAE3;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: #6C7671;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.link-show {
+  background: none;
+  border: 0;
+  color: var(--green-action);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+  flex: 0 0 auto;
+}
+
+.fac-card.is-hidden-row {
+  background: #F7F6F2;
+  border-style: dashed;
+  opacity: 0.72;
+}
+.hidden-reason {
+  color: #8A8577;
+  font-size: 0.72rem;
+  font-style: italic;
+}
+.restore-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green-action);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  cursor: pointer;
+  margin-left: auto;
+}

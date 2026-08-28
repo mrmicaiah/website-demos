@@ -41,6 +41,12 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   (`websiteUri`, Enterprise SKU, full mask only) and from OSM
   `website`/`contact:website`. A missing website renders a low-weight badge and
   has its own filter entry: it is a prospecting signal she wants, not a gap.
+- **Early-childhood boundary (2026-08-28, her second round)** — schools,
+  colleges and private prep are hidden; early childhood never is. See the locked
+  decision in `CONTEXT.md`. All three routes re-backfilled in place.
+- **Filters are assumed, not managed** — the four hide toggles are gone. Junk
+  categories hide by default behind one collapsed "Hidden: N places (…)" line
+  with Show and per-category Restore.
 - **30-mile corridor, tiled** — the full 30 miles is ingested and stored, with a
   distance lens (30 / 20 / 10 mi) narrowing it client-side. See the tiling and
   saturation findings below; widening the radius alone made things worse.
@@ -52,16 +58,16 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **79 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+- **95 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
 
 | route | id | corridor | rows | ≤10mi | ≤20mi | school | no-play | playground | visible | calls |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 22 | 2 | 0 | 191 | none |
-| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 83 | 9 | 9 | 544 | none |
-| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 10 | 5 | 0 | 175 | **1 call** |
+| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 25 | 2 | 0 | 189 | none |
+| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 101 | 9 | 9 | 526 | none |
+| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 36 | 5 | 0 | 149 | none |
 
 - Decatur and gatlingburg were re-ingested 2026-08-28 at the **30-mile corridor**
   and carry `corridor_m = 48280`. Both roughly tripled in size.
@@ -70,6 +76,11 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   lens options and says why, rather than offering three options that would show
   identical rows.
 - **Never re-ingest Connecticut.** Flag columns are safe to `UPDATE` in place.
+  Note: its one call ("Play To Learn Childcare") was reset to `not_called` at
+  21:39 on 2026-08-28 by someone using the UI, so the route currently shows zero
+  activity. The never-re-ingest rule still stands — its stored rows only reach
+  10 miles and re-ingesting would be the only way to widen them, which is the
+  enrichment gap below, not a licence to rebuild it.
 
 #### The Connecticut enrichment gap
 
@@ -174,6 +185,30 @@ tiling density.
 ## In flight
 
 Nothing.
+
+### Open question for the caller: ambiguous school rows
+
+The early-childhood boundary leaves a handful of rows genuinely uncertain, and
+they are **flagged** (hidden) on the strength of their Google type while reading
+like they might serve preschoolers. She should rule on these:
+
+| row | type | why it is uncertain |
+| --- | --- | --- |
+| Alphabet Academy, North Campus | `school` | reads like a preschool chain |
+| The Children's School | `primary_school` | PreK through elementary |
+| The Bright School | `school` | PreK through elementary |
+| Tate's School | `school` | PreK through elementary |
+| Whitby School | `school` | runs a Montessori early-childhood programme |
+| Pine Point School, The Gordon School | `school` | private PreK-8 |
+
+If she wants PreK-bearing K-8 schools kept, the change is to treat "PreK" or a
+grade range starting below kindergarten as an early-childhood signal. Nothing is
+lost either way — Show/Restore brings them straight back.
+
+Separately, **"Institute for Learning Styles Research"** (a research non-profit,
+not a facility) is deliberately unflagged: "Institute" was left out of the
+name patterns as too risky, and one research org on a list is cheaper than
+hiding a real Montessori institute.
 
 ## Blocked / awaiting
 

@@ -124,19 +124,38 @@ them only with a reason better than the one recorded here.
 
 **Who gets hidden, and why it is always a toggle**
 
-- **Hiding is never deleting.** Franchises, home daycares, public schools and
-  no-outdoor-play shapes are all flags on the row with a toggle in the header.
-  The data stays in D1. A preference is not a fact about the world, and today's
-  "don't show me these" becomes next year's lead list.
-- **Public schools are the filter's target; private schools are prospects.** Her
-  decision, made after the first cut hid forty rows on one route and most of
-  them turned out to be Montessoris, country day schools and parochial schools —
-  exactly the places that buy playgrounds. So: `primary_school` and
-  `secondary_school` types flag; Head Start and public-school name patterns
-  flag; a bare `school` type does **not** flag on its own, only when a
-  public-school name agrees with it; and any private or religious marker in the
-  name vetoes all of it. A public magnet named "Academy" now shows on her list,
-  which is the intended trade — a wasted call is cheaper than a hidden prospect.
+- **Hiding is never deleting.** Franchises, home daycares, schools and colleges,
+  and no-outdoor-play shapes are all flags on the row. The data stays in D1. A
+  preference is not a fact about the world, and today's "don't show me these"
+  becomes next year's lead list.
+- **She never has to press anything to get a clean list.** As of 2026-08-28 the
+  junk categories are hidden by default with no toggles to manage: a single
+  collapsed line above the list says how many were hidden and why, a Show
+  control expands them as muted rows, and each carries a Restore for its
+  category. Junk management is assumed; the status dropdown, search and distance
+  lens remain, because those are lenses, not junk management.
+- **Early childhood is a prospect; school-age and older is not — private
+  included.** Her decision, 2026-08-28, second round of feedback. It
+  **supersedes** the earlier public-versus-private rule, which had been
+  protecting exactly the prep schools, country day schools and parochial
+  academies she wanted gone. The line is developmental, not public/private:
+  daycare, preschool, childcare and pre-K Montessori are her market; anything
+  serving school-age children or older, including private prep schools and
+  anything college-related, is not.
+  - `is_school_program` keeps its column name but now means
+    **school-age-or-higher**, not "public school".
+  - The **early-childhood guard is the only veto** and beats every other signal:
+    preschool, pre-K, daycare, child care, childcare, early learning, nursery,
+    Montessori, or a `child_care_agency` / `preschool` type. Real rows are why —
+    "The Connecticut College Children's Program", "Just 4 The Kids Daycare
+    College" and "Applebrook Country Day School" are all her customers despite
+    their names.
+  - **Head Start is the one exception that outranks the veto**, because she
+    asked for it hidden in her first round and that instruction still stands.
+  - A bare `school` type is Google's catch-all and yields to an
+    early-childhood-adjacent name (learning, children's, weekday, ministry,
+    development center). Stronger types do not.
+  - **Ambiguous rows stay visible** and get reported to her, never guessed at.
 - **That asymmetry is the general rule for this whole class of heuristic.** When
   unsure whether to hide, don't.
 

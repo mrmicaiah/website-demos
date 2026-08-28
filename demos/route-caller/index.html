@@ -83,15 +83,16 @@
 
       <div class="head-toggles">
         <button id="toggle-sort" class="chip" type="button">Drive order</button>
-        <button id="toggle-franchise" class="chip" type="button" aria-pressed="true">Hide franchises</button>
-        <button id="toggle-home" class="chip" type="button" aria-pressed="true">Hide home daycares</button>
-        <button id="toggle-school" class="chip" type="button" aria-pressed="true">Hide schools &amp; Head Starts</button>
-        <button id="toggle-playground" class="chip" type="button" aria-pressed="true">Hide no-playground types</button>
         <button id="toggle-map" class="chip" type="button" aria-expanded="false">Map</button>
       </div>
     </header>
 
     <div id="map-panel" class="map-panel" hidden><div id="map"></div></div>
+
+    <div id="hidden-bar" class="hidden-bar" hidden>
+      <span id="hidden-summary"></span>
+      <button id="toggle-hidden" class="link-show" type="button" aria-expanded="false">Show</button>
+    </div>
 
     <main id="cards" class="cards"></main>
     <p id="empty-state" class="empty" hidden></p>

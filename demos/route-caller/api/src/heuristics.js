@@ -53,39 +53,62 @@ export function isHomeDaycare(name, tags = {}) {
 }
 
 /**
- * Public schools, elementary schools and Head Start programs — the caller does
- * not sell playground equipment to public districts, so she wants them hidden.
+ * `is_school_program` — despite the column name, this now means
+ * SCHOOL-AGE-OR-OLDER, not "public school". The boundary sharpened on
+ * 2026-08-28 after the caller's second round of feedback.
  *
- * PRIVATE schools, academies, Montessoris and religious schools are PROSPECTS
- * and must never be flagged. That is her decision, made after seeing the first
- * cut hide forty rows on one route, most of them private. Public is the target;
- * everything else stays on the list.
+ * She sells playground equipment. Her line is developmental, not public/private:
+ * **early-childhood places are prospects; anything serving school-age children
+ * or older is not** — private prep schools and colleges included. That
+ * supersedes the earlier private-school veto, which was protecting exactly the
+ * prep schools and country day schools she now wants gone.
  *
- * IMPORTANT, and different from the retail deny-list in pipeline.js: this rule
- * DOES match on names. That is deliberate and the two are not the same kind of
- * rule. The retail deny-list DELETES rows at ingest, so it may only act on
- * authoritative type data — a wrong call there loses a real facility silently
- * and permanently. This flag only HIDES a row behind a toggle the caller can
- * flip off, and the data stays in D1 either way. A wrong call here costs one
- * checkbox, so name evidence is an acceptable input. Do not copy this rule's
- * looseness back into the deny-list.
+ * The early-childhood guard is the ONLY veto, and it beats every other signal:
+ * a name or Google type carrying preschool, pre-K, daycare, child care,
+ * childcare, early learning, nursery, Montessori, `child_care_agency` or
+ * `preschool` is never flagged. Real rows are why this has to outrank
+ * everything: "The Connecticut College Children's Program", "Just 4 The Kids
+ * Daycare College", "West Point Prep School" and "Applebrook Country Day
+ * School" are all typed as child care or preschool by Google, and all of them
+ * are her customers despite the college/prep/country-day words in their names.
  *
- * Evidence, after narrowing:
- * - `primary_school` / `secondary_school` are specific enough to flag alone.
- * - A bare `school` type is NOT: on real routes it caught Montessoris, country
- *   day schools and parochial schools far more often than public ones. It flags
- *   only when a public-school name pattern agrees with it.
- * - Head Start and public-school name patterns flag on their own.
- * - Any private-school marker in the name vetoes all of the above. This is what
- *   keeps her prospects on the list, and it is why a public magnet named
- *   "Academy For Academics & Arts" now shows: a wasted call is cheaper than a
- *   hidden prospect.
+ * Head Start is the one deliberate exception that outranks the veto — see
+ * below.
+ *
+ * Genuinely ambiguous rows are left UNFLAGGED and reported for her to rule on.
+ * A wasted call beats a hidden prospect.
  */
-const STRONG_SCHOOL_TYPES = new Set(['primary_school', 'secondary_school']);
+// Specific enough to flag on their own.
+const STRONG_SCHOOL_TYPES = new Set(['primary_school', 'secondary_school', 'university']);
+// `school` is Google's catch-all and lands on both public elementary schools and
+// church weekday programs, so it yields to an early-childhood-adjacent name.
 const WEAK_SCHOOL_TYPE = 'school';
 
-const PUBLIC_NAME_PATTERNS = [
-  /\bhead[\s-]?start\b/i,
+/** Early childhood: her market. Vetoes everything except Head Start. */
+const EARLY_CHILDHOOD_TYPES = new Set(['child_care_agency', 'preschool']);
+
+const EARLY_CHILDHOOD_NAMES = [
+  /\bpre-?schools?\b/i,
+  /\bpre-?k\b/i,
+  /\bpre-?kindergarten\b/i,
+  /\bday\s?cares?\b/i,
+  /\bchild\s?care\b/i,
+  /\bearly (learning|childhood|education)\b/i,
+  /\bnursery\b/i,
+  /\bmontessori\b/i,
+  /\bwaldorf\b/i,
+];
+
+/**
+ * Head Start is publicly funded and she asked for it hidden in her first round
+ * of feedback. It is early childhood, so the veto would otherwise protect it —
+ * many Head Starts are typed `preschool`. Her earlier instruction still stands,
+ * so this is checked before the veto. Flagged here for whoever revisits it.
+ */
+const HEAD_START = /\bhead[\s-]?start\b/i;
+
+const SCHOOL_AGE_NAMES = [
+  // public school patterns, from her first round of feedback
   /\belementary\b/i,
   /\bmiddle school\b/i,
   /\bhigh school\b/i,
@@ -93,54 +116,52 @@ const PUBLIC_NAME_PATTERNS = [
   /\bcity schools\b/i,
   /\bcounty schools\b/i,
   /\bboard of education\b/i,
+  // higher education
+  /\bcolleges?\b/i,
+  /\buniversit(y|ies)\b/i,
+  /\bseminary\b/i,
+  /\badult (education|learning)\b/i,
+  /\bcontinuing education\b/i,
+  // private prep and the country-day shape, which the old private-marker veto
+  // was protecting and which she now wants gone
+  /\bpreparatory\b/i,
+  /\bprep school\b/i,
+  /\bcountry day\b/i,
+  /\bcountry school\b/i,
 ];
 
 /**
- * Names that mark a school as private, and therefore a prospect. Includes the
- * child-care words (a "Learning Center" or "Preschool" is her customer by
- * definition) plus the private and religious markers she called out.
+ * Weak counter-signals: not proof of early childhood, but enough doubt that a
+ * bare `school` type alone should not hide the row. Taken from real rows —
+ * "First Baptist Cleveland Weekday Ministry", "Fort Sanders Educational
+ * Development center" and "Amy's Active Learning" are all typed `school` by
+ * Google and all read like early-childhood programs.
  */
-const PROSPECT_NAME_WORDS = [
-  /\bpre-?schools?\b/i,
-  /\bday\s?cares?\b/i,
-  /\bchild\s?care\b/i,
+const EARLY_CHILDHOOD_ADJACENT = [
+  /\blearning\b/i,
   /\bchildren'?s\b/i,
-  /\blearning cent(er|re)\b/i,
-  /\bacadem(y|ies)\b/i,
-  /\bmontessori\b/i,
-  /\bwaldorf\b/i,
-  /\bcountry (day )?school\b/i,
-  /\bcountry day\b/i,
-  /\bprep(aratory)?\b/i,
-  /\bday school\b/i,
-  /\bchristian\b/i,
-  /\bcatholic\b/i,
-  /\blutheran\b/i,
-  /\bbaptist\b/i,
-  /\bepiscopal\b/i,
-  /\bmethodist\b/i,
-  /\bpresbyterian\b/i,
-  /\bhebrew\b/i,
-  /\bjewish\b/i,
-  /\bislamic\b/i,
-  /\bmuslim\b/i,
-  /\bparish\b/i,
-  /\bsaints?\b/i,
-  /\bholy\b/i,
+  /\bweekday\b/i,
+  /\bministry\b/i,
+  /\bdevelopment cent(er|re)\b/i,
 ];
 
 export function isSchoolProgram(name, tags = {}, primaryType = null) {
   const candidate = name || '';
 
-  // A private-school marker vetoes every other signal — prospects stay visible.
-  if (PROSPECT_NAME_WORDS.some((re) => re.test(candidate))) return false;
+  if (HEAD_START.test(candidate)) return true;
 
-  const publicName = PUBLIC_NAME_PATTERNS.some((re) => re.test(candidate));
-  if (publicName) return true;
+  // The early-childhood veto. Nothing below this line can flag her market.
+  if (EARLY_CHILDHOOD_TYPES.has(primaryType)) return false;
+  if (EARLY_CHILDHOOD_NAMES.some((re) => re.test(candidate))) return false;
+
   if (STRONG_SCHOOL_TYPES.has(primaryType)) return true;
-  if (tags?.amenity === 'school') return true;
-  // A bare `school` type needs a public name to agree, and there isn't one here.
-  if (primaryType === WEAK_SCHOOL_TYPE) return false;
+  if (tags?.amenity === 'school' || tags?.amenity === 'university') return true;
+  if (SCHOOL_AGE_NAMES.some((re) => re.test(candidate))) return true;
+
+  if (primaryType === WEAK_SCHOOL_TYPE) {
+    // Ambiguous rows stay visible: a wasted call beats a hidden prospect.
+    return !EARLY_CHILDHOOD_ADJACENT.some((re) => re.test(candidate));
+  }
   return false;
 }
 

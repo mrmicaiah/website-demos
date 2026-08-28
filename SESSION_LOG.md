@@ -5,6 +5,72 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — The boundary sharpens: early childhood in, school-age out
+
+Her second round of feedback moved the line, and moved it somewhere the previous
+rule was actively working against. Round one produced a public-versus-private
+rule; round two says the split is developmental. **Early-childhood places are
+prospects; anything serving school-age children or older is not — private prep
+schools and colleges included.**
+
+That supersedes the private-marker veto entirely. The veto was protecting exactly
+the country day schools, prep schools and parochial academies she now wants gone.
+A rule that looked right two rounds ago was, in her terms, backwards.
+
+### Reading the data first paid for itself
+
+The brief said scan the real rows before writing the classifier. Doing so
+changed the design:
+
+- **The early-childhood veto has to outrank everything, including name
+  evidence.** "The Connecticut College Children's Program", "Children's Learning
+  Center at Mitchell College", "Just 4 The Kids Daycare College, LLC.", "West
+  Point Prep School", "Kingdom Heights Preparatory", "Playground Prep",
+  "Applebrook Country Day School" — every one carries a college, prep or
+  country-day word in its name, and every one is typed `child_care_agency` or
+  `preschool` by Google. All are her customers. A name-first rule would have
+  hidden seven prospects.
+- **`school` is Google's catch-all and is not trustworthy alone.** It lands on
+  public elementary schools *and* on "First Baptist Cleveland Weekday Ministry",
+  "Fort Sanders Educational Development center" and "Amy's Active Learning".
+  So a bare `school` type yields to an early-childhood-adjacent name, while
+  `primary_school`, `secondary_school` and `university` flag outright.
+- **Types barely mattered for higher ed.** Exactly one row across 1,103 is typed
+  `university`. Everything college-related leaks in by name.
+
+### A conflict I resolved rather than guessed at
+
+The brief says the early-childhood guard is the ONLY veto, and that nothing
+carrying a `preschool` type is ever flagged. But most Head Starts are typed
+`preschool`, and hiding Head Start was her explicit first-round request. Taken
+literally the new rule would silently undo it.
+
+Head Start therefore checks *before* the veto, and it is commented as the one
+deliberate exception. Both of her instructions survive.
+
+### Filters became assumed
+
+Four hide toggles replaced by one line: "Hidden: N places (schools and colleges
+X, franchises Y, no outdoor play Z)", a Show control, and a per-category Restore
+on each muted row. She should never press anything to get a clean list — the bar
+exists so the list is honest about what it left out, not so she has to manage it.
+The status dropdown, search and distance lens stayed, because those are lenses
+rather than junk management.
+
+### Numbers
+
+Connecticut 10 to 36 flagged, gatlingburg 83 to 101, Decatur 22 to 25. One row
+un-flagged: "Hixson Elementary Sch Child Cr", a childcare programme at an
+elementary school, which the elementary pattern used to catch and the veto now
+protects. That single row is a good summary of the whole change.
+
+Nineteen rows sit close to the line and are flagged on type alone. Rather than
+guess, they are listed in `STATE.md` for her to rule on — the shortlist being
+Alphabet Academy, The Children's School, The Bright School, Tate's School and
+Whitby School, all of which plausibly run PreK.
+
+---
+
 ## 2026-08-28 — 30-mile corridor: the measurement that changed the design
 
 She wants the full 30 miles ingested with the UI filtering it down. The brief

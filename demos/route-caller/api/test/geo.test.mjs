@@ -386,19 +386,185 @@ check('name normalization strips punctuation and corporate suffixes', () => {
   assert(normalizeName('A & B Childcare') === 'a and b childcare');
 });
 
+console.log('school-age / higher-ed flag');
+check('school-age and higher-ed types are flagged', () => {
+  assert(isSchoolProgram('Beecher Road Elementary School', {}, 'primary_school'));
+  assert(isSchoolProgram('The Wheeler School', {}, 'secondary_school'));
+  assert(isSchoolProgram('CT State Community College Norwalk', {}, 'university'));
+  assert(isSchoolProgram('Dayton City School', {}, 'school'));
+});
+check('the prep and college shapes she called out now flag', () => {
+  // These are exactly what the old private-marker veto was protecting.
+  const flag = [
+    ['Mater Salvatoris College Preparatory School', 'secondary_school'],
+    ['Our Lady of Mercy Preparatory Academy', 'school'],
+    ['Greenwich Country Day School', 'school'],
+    ['The Country School', 'school'],
+    ['Rocky Hill Country Day School', 'school'],
+    ['Hamden Hall Country Day School', 'primary_school'],
+    ['N Stonington Christian Academy', 'primary_school'],
+    ['St. John Neumann Catholic School', 'school'],
+    ['Bi-Cultural Hebrew Academy of Connecticut', 'school'],
+    ['Riverside Seminary', null],
+    ['Downtown Adult Education Center', null],
+  ];
+  for (const [name, type] of flag) {
+    assert(isSchoolProgram(name, {}, type), `${name} (${type}) should be hidden now`);
+  }
+});
+check('early childhood is never flagged, whatever else the name says', () => {
+  // Every one of these is a real row: college, prep, country-day and day-school
+  // words attached to places Google types as her market.
+  const prospects = [
+    ["The Connecticut College Children's Program", 'preschool'],
+    ['Children\u2019s Learning Center at Mitchell College', 'preschool'],
+    ['Just 4 The Kids Daycare College, LLC.', 'child_care_agency'],
+    ['West Point Prep School', 'preschool'],
+    ['Kingdom Heights Preparatory', 'preschool'],
+    ['Playground Prep', 'child_care_agency'],
+    ['Applebrook Country Day School', 'child_care_agency'],
+    ['Mill Creek Country Day School', 'child_care_agency'],
+    ['Presbyterian Day School', 'preschool'],
+    ['Wesley Day School', 'preschool'],
+    ['Hixson Elementary Sch Child Cr', 'child_care_agency'],
+    ['All Saints Catholic School - Preschool to Grade 8', 'school'],
+    ['Point Christian Academy and Preschool', 'school'],
+    ['Calvary Baptist Preschool', 'school'],
+  ];
+  for (const [name, type] of prospects) {
+    assert(!isSchoolProgram(name, {}, type), `${name} (${type}) is her market`);
+  }
+});
+check('Montessori stays a prospect — her explicit call', () => {
+  assert(!isSchoolProgram('Elm City Montessori School', {}, 'school'));
+  assert(!isSchoolProgram('Knoxville Montessori School', {}, 'school'));
+  assert(!isSchoolProgram('Seven Acres Montessori', {}, 'school'));
+  assert(!isSchoolProgram('The Children\u2019s Tree Montessori School', {}, 'school'));
+});
+check('a bare `school` type yields to an early-childhood-adjacent name', () => {
+  // Google's catch-all type lands on church weekday programs and development
+  // centres as well as public elementaries, so it is the weakest evidence.
+  assert(!isSchoolProgram('First Baptist Cleveland Weekday Ministry', {}, 'school'));
+  assert(!isSchoolProgram('Fort Sanders Educational Development center', {}, 'school'));
+  assert(!isSchoolProgram("Amy's Active Learning", {}, 'school'));
+  // ...but a stronger type is not overridden by the same words.
+  assert(isSchoolProgram('Riverside Learning Academy', {}, 'primary_school'));
+});
+check('Head Start still flags, outranking the early-childhood veto', () => {
+  // Her first-round decision; Head Start is early childhood but publicly funded.
+  assert(isSchoolProgram('Decatur City Head Start', {}, 'preschool'));
+  assert(isSchoolProgram('Lulac Head Start Inc', {}, 'child_care_agency'));
+  assert(isSchoolProgram('Madison County Head-Start', {}, null));
+});
+check('OSM school and university tags are flagged', () => {
+  assert(isSchoolProgram('Ridgecrest', { amenity: 'school' }));
+  assert(isSchoolProgram('State Campus', { amenity: 'university' }));
+  assert(!isSchoolProgram('Ardent Preschool', { amenity: 'kindergarten' }));
+});
+check('ordinary child care is untouched', () => {
+  const untouched = [
+    ['Sunny Days Learning Center', 'child_care_agency'],
+    ['KinderCare Learning Center', 'child_care_agency'],
+    ['Boys & Girls Clubs of North Alabama', null],
+    ['Growing in Grace Childcare', 'child_care_agency'],
+    ['St Paul Lutheran Church Preschool', 'preschool'],
+  ];
+  for (const [name, type] of untouched) {
+    assert(!isSchoolProgram(name, {}, type), `${name} should stay visible`);
+  }
+});
+
+console.log('exclusion metrics');
+check('effective counts distinct in-corridor rows, raw counts candidates', () => {
+  // One store returned by three overlapping sample-point searches, a second
+  // store found once, and a third that sits outside the 16 km corridor.
+  const excluded = [
+    { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Target', primaryType: 'department_store', lat: 39.2001, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Roses Discount Store', primaryType: 'discount_store', lat: 39.6, lng: -77.01, source: 'google', tags: {} },
+    { name: 'Faraway Mall', primaryType: 'shopping_mall', lat: 39.5, lng: -75.0, source: 'google', tags: {} },
+  ];
+  const summary = summarizeExcluded(excluded, index, 16000);
+  assert(summary.raw === 5, `raw should count every candidate, got ${summary.raw}`);
+  assert(summary.effective === 2, `effective should be 2 (Target + Roses), got ${summary.effective}`);
+  assert(summary.effective < summary.raw, 'effective must not overstate the raw count');
+});
+check('the type breakdown counts raw candidates, not deduped rows', () => {
+  const { types } = summarizeExcluded(
+    [
+      { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, tags: {} },
+      { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, tags: {} },
+      { name: 'Publix', primaryType: 'grocery_store', lat: 39.3, lng: -77.0, tags: {} },
+    ],
+    index,
+    16000
+  );
+  assert(types.department_store === 2, `got ${JSON.stringify(types)}`);
+  assert(types.grocery_store === 1, `got ${JSON.stringify(types)}`);
+});
+check('a candidate with no primaryType is bucketed as unknown, never dropped from the tally', () => {
+  const { types, raw } = summarizeExcluded(
+    [{ name: 'Mystery', lat: 39.2, lng: -77.0, tags: {} }],
+    index,
+    16000
+  );
+  assert(raw === 1 && types.unknown === 1, `got ${JSON.stringify(types)}`);
+});
+check('nothing excluded reports zeroes, not undefined', () => {
+  const summary = summarizeExcluded([], index, 16000);
+  assert(summary.raw === 0 && summary.effective === 0, 'both counts zero');
+  assert(Object.keys(summary.types).length === 0, 'empty breakdown');
+});
+
+console.log('primary_type');
+check('primaryType survives placement onto the route', () => {
+  const placed = placeOnRoute(
+    [
+      { name: 'Little Acorns', primaryType: 'child_care_agency', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+      { name: 'Ardent Preschool', lat: 39.3, lng: -77.0, source: 'osm', tags: {} },
+    ],
+    index,
+    16000
+  );
+  assert(placed.find((f) => f.source === 'google').primaryType === 'child_care_agency');
+  assert(placed.find((f) => f.source === 'osm').primaryType === null, 'OSM rows carry null, not undefined');
+});
+check('a merged row keeps the Google type when OSM contributed the base record', () => {
+  const merged = mergeCandidates([
+    [{ name: 'O2B Kids Madison', lat: 39.2, lng: -77.0, phone: null, source: 'osm', tags: {} }],
+    [{ name: 'O2B Kids Madison', lat: 39.2005, lng: -77.0, phone: '(256) 449-8558', primaryType: 'child_care_agency', source: 'google', tags: {} }],
+  ]);
+  assert(merged.length === 1, 'the two records merged');
+  assert(merged[0].source === 'both', 'source recorded as both');
+  assert(
+    merged[0].primaryType === 'child_care_agency',
+    `type should survive the merge, got ${merged[0].primaryType}`
+  );
+});
+
+console.log('heuristics');
+check('national chains are flagged as franchises', () => {
+  assert(isFranchise('KinderCare Learning Center #302'));
+  assert(isFranchise('The Goddard School of Ashburn'));
+  assert(!isFranchise('Sunny Days Learning Center'));
+});
+check('in-home providers are flagged', () => {
+  assert(isHomeDaycare("Maria's Family Child Care"));
+  assert(isHomeDaycare('Anywhere', { building: 'house' }));
+  assert(!isHomeDaycare('Bright Beginnings Academy', { building: 'commercial' }));
+});
+check('name normalization strips punctuation and corporate suffixes', () => {
+  assert(normalizeName('The Little Acorns, LLC.') === 'little acorns');
+  assert(normalizeName('A & B Childcare') === 'a and b childcare');
+});
+
 console.log('school / Head Start flag');
 check('specific school types flag on their own', () => {
   assert(isSchoolProgram('Beecher Road Elementary School', {}, 'primary_school'));
   assert(isSchoolProgram('Gales Ferry School', {}, 'primary_school'));
   assert(isSchoolProgram('Barnard Environmental Science & Technology School', {}, 'primary_school'));
   assert(isSchoolProgram('Central High', {}, 'secondary_school'));
-});
-check('a bare `school` type is NOT enough on its own', () => {
-  // It caught Montessoris and parochial schools far more often than public ones.
-  assert(!isSchoolProgram('Whitby School', {}, 'school'));
-  assert(!isSchoolProgram('The Bright School', {}, 'school'));
-  assert(!isSchoolProgram('Friendship School', {}, 'school'));
-  assert(!isSchoolProgram('Barnum School', {}, 'school'));
 });
 check('a bare `school` type flags when a public name agrees', () => {
   assert(isSchoolProgram('Whitesburg Elementary School', {}, 'school'));
@@ -437,37 +603,30 @@ check('public school name patterns are flagged', () => {
   }
 });
 check('a school word alongside a child care word is NOT flagged on name alone', () => {
+  // Superseded in part: Head Start now flags regardless, see the Head Start
+  // test; and "Academy" alone no longer protects anything, so a name like
+  // "Bright Beginnings Elementary Academy" flags on the elementary pattern.
   const keepVisible = [
     'ABC Learning Academy',
     'Little Scholars Elementary Prep Daycare',
     'St Paul\u2019s Lutheran Church & Preschool',
     'Central Park Baptist Childcare Center',
     'Elementary Steps Child Care',
-    'Head Start Learning Center',
-    'Bright Beginnings Elementary Academy',
   ];
   for (const name of keepVisible) {
     assert(!isSchoolProgram(name), `${name} should stay visible`);
   }
 });
-check('private schools are prospects and are never flagged, whatever the type says', () => {
-  // Her decision after the first cut hid forty rows on one route, most private.
-  const prospects = [
-    ['Elm City Montessori School', 'school'],
-    ["The Children's School", 'primary_school'],
-    ['Alphabet Academy, North Campus', 'school'],
-    ['All Saints Catholic School - Preschool to Grade 8', 'school'],
-    ['Hamden Hall Country Day School', 'primary_school'],
-    ['N Stonington Christian Academy', 'primary_school'],
-    ['Bi-Cultural Hebrew Academy of Connecticut', 'school'],
-    ['Grace Lutheran School', 'school'],
-    ['Our Lady of Mercy Preparatory Academy', 'school'],
-    ['Seven Acres Montessori', 'school'],
-    ['Little Scholars Elementary Prep Daycare', 'primary_school'],
-  ];
-  for (const [name, type] of prospects) {
-    assert(!isSchoolProgram(name, {}, type), `${name} (${type}) must stay on her list`);
-  }
+check('the private-school veto is gone — superseded 2026-08-28', () => {
+  // Her earlier decision protected these as prospects. The sharpened boundary
+  // is developmental, not public/private: school-age is out either way.
+  assert(isSchoolProgram('Hamden Hall Country Day School', {}, 'primary_school'));
+  assert(isSchoolProgram('N Stonington Christian Academy', {}, 'primary_school'));
+  assert(isSchoolProgram('Ezra Academy', {}, 'primary_school'));
+  // The one it protected that is still protected, now for a different reason:
+  assert(!isSchoolProgram('Elm City Montessori School', {}, 'school'), 'Montessori is early childhood');
+  // And "Academy" no longer shields a school-age name.
+  assert(isSchoolProgram('Bright Beginnings Elementary Academy', {}, null));
 });
 check('the public rows she actually wants hidden are still flagged', () => {
   const hide = [

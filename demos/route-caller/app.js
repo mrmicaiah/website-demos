@@ -47,10 +47,9 @@
     distanceNote: $('distance-note'),
     counters: $('counters'),
     toggleSort: $('toggle-sort'),
-    toggleFranchise: $('toggle-franchise'),
-    toggleHome: $('toggle-home'),
-    toggleSchool: $('toggle-school'),
-    togglePlayground: $('toggle-playground'),
+    hiddenBar: $('hidden-bar'),
+    hiddenSummary: $('hidden-summary'),
+    toggleHidden: $('toggle-hidden'),
     toggleMap: $('toggle-map'),
     mapPanel: $('map-panel'),
     cards: $('cards'),
@@ -63,10 +62,11 @@
     const defaults = {
       routeId: null,
       sort: 'drive',
-      hideFranchises: true,
-      hideHomeDaycares: true,
-      hideSchoolPrograms: true,
-      hidePlaygroundUnlikely: true,
+      // Junk categories are hidden by default and she never has to press
+      // anything. `restored` holds the categories she has explicitly brought
+      // back, and `showHidden` only expands the hidden rows for a look.
+      restored: [],
+      showHidden: false,
       maxDistanceM: 48280, // 30 mi — ingest wide, filter narrow
       search: '',
       status: 'all',
@@ -262,6 +262,23 @@
     return (name || 'Route').trim().split(/\s+/)[0].slice(0, 8).toUpperCase();
   }
 
+  /* The junk categories, hidden by default. Each is a flag on the row; the data
+     is always there and Restore is one tap. */
+  const CATEGORIES = [
+    { key: 'school', label: 'schools and colleges', test: (f) => f.is_school_program },
+    { key: 'franchise', label: 'franchises', test: (f) => f.is_franchise },
+    { key: 'playground', label: 'no outdoor play', test: (f) => f.playground_unlikely },
+    { key: 'home', label: 'home daycares', test: (f) => f.is_home_daycare },
+  ];
+
+  const isRestored = (key) => prefs.restored.includes(key);
+
+  /** The category hiding a row, or null when the row belongs on her list. */
+  function hiddenBy(f) {
+    const match = CATEGORIES.find((c) => c.test(f) && !isRestored(c.key));
+    return match || null;
+  }
+
   /* The caller's list: everything on the route minus the categories she has
      chosen to hide. Search and the status filter are a transient lens on top of
      this, so they deliberately do NOT narrow it — the header counters answer
@@ -270,11 +287,7 @@
     const maxDistance = effectiveMaxDistance();
     return state.facilities.filter((f) => {
       if (f.distance_from_route_m != null && f.distance_from_route_m > maxDistance) return false;
-      if (prefs.hideFranchises && f.is_franchise) return false;
-      if (prefs.hideHomeDaycares && f.is_home_daycare) return false;
-      if (prefs.hideSchoolPrograms && f.is_school_program) return false;
-      if (prefs.hidePlaygroundUnlikely && f.playground_unlikely) return false;
-      return true;
+      return !hiddenBy(f);
     });
   }
 
@@ -359,21 +372,14 @@
     el.badge.textContent = routeBadge(state.route.name);
     el.title.textContent = `${state.route.name} — Call List`;
 
-    const hidden = [];
-    if (prefs.hideFranchises) hidden.push('franchises');
-    if (prefs.hideHomeDaycares) hidden.push('home daycares');
-    if (prefs.hideSchoolPrograms) hidden.push('schools');
-    if (prefs.hidePlaygroundUnlikely) hidden.push('no-playground types');
     const lens = effectiveMaxDistance();
     const within = lens < routeCorridorM() ? `Within ${milesLabel(lens)}` : null;
-    el.subtitle.textContent =
-      [
-        within,
-        `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}`,
-        hidden.length ? `${hidden.join(' and ')} hidden` : 'showing everything',
-      ]
-        .filter(Boolean)
-        .join(' · ');
+    el.subtitle.textContent = [
+      within,
+      `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
 
     const scope = listScope();
     const called = scope.filter((f) => f.status !== 'not_called').length;
@@ -384,13 +390,10 @@
     el.search.value = prefs.search;
     el.filterStatus.value = prefs.status;
     el.toggleSort.textContent = prefs.sort === 'capacity' ? 'Biggest first' : 'Drive order';
-    el.toggleFranchise.setAttribute('aria-pressed', String(prefs.hideFranchises));
-    el.toggleHome.setAttribute('aria-pressed', String(prefs.hideHomeDaycares));
-    el.toggleSchool.setAttribute('aria-pressed', String(prefs.hideSchoolPrograms));
-    el.togglePlayground.setAttribute('aria-pressed', String(prefs.hidePlaygroundUnlikely));
 
     el.cards.innerHTML = '';
     list.forEach((f) => el.cards.append(facilityCard(f, websiteDataAvailable)));
+    renderHidden(websiteDataAvailable);
 
     el.empty.hidden = list.length > 0;
     if (!list.length) {
@@ -403,6 +406,56 @@
       }
     }
     if (prefs.mapOpen) drawMap(list);
+  }
+
+  /* The hidden rows: summarised in one line, expandable, never lost. She should
+     never have to press anything to get a clean list — this is here so the list
+     is honest about what it left out, not so she has to manage it. */
+  function renderHidden(websiteDataAvailable) {
+    const grouped = new Map();
+    for (const f of state.facilities) {
+      if (f.distance_from_route_m != null && f.distance_from_route_m > effectiveMaxDistance()) {
+        continue; // out of the lens entirely; not "hidden as junk"
+      }
+      const category = hiddenBy(f);
+      if (!category) continue;
+      if (!grouped.has(category.key)) grouped.set(category.key, { category, rows: [] });
+      grouped.get(category.key).rows.push(f);
+    }
+
+    const total = [...grouped.values()].reduce((sum, g) => sum + g.rows.length, 0);
+    el.hiddenBar.hidden = total === 0;
+    if (!total) return;
+
+    const parts = [...grouped.values()].map((g) => `${g.category.label} ${g.rows.length}`);
+    el.hiddenSummary.textContent = `Hidden: ${total} place${total === 1 ? '' : 's'} (${parts.join(', ')})`;
+    el.toggleHidden.textContent = prefs.showHidden ? 'Hide' : 'Show';
+    el.toggleHidden.setAttribute('aria-expanded', String(prefs.showHidden));
+    if (!prefs.showHidden) return;
+
+    for (const { category, rows } of grouped.values()) {
+      rows.sort(byDriveOrder);
+      for (const f of rows) {
+        const card = facilityCard(f, websiteDataAvailable);
+        card.classList.add('is-hidden-row');
+        const sub = card.querySelector('.fac-sub');
+        const reason = document.createElement('span');
+        reason.className = 'hidden-reason';
+        reason.textContent = category.label;
+        sub.append(reason);
+        const restore = document.createElement('button');
+        restore.type = 'button';
+        restore.className = 'restore-btn';
+        restore.textContent = `Restore ${category.label}`;
+        restore.addEventListener('click', () => {
+          prefs.restored = [...new Set([...prefs.restored, category.key])];
+          savePrefs();
+          render();
+        });
+        sub.append(restore);
+        el.cards.append(card);
+      }
+    }
   }
 
   function facilityCard(f, websiteDataAvailable = true) {
@@ -673,26 +726,8 @@
     render();
   });
 
-  el.toggleFranchise.addEventListener('click', () => {
-    prefs.hideFranchises = !prefs.hideFranchises;
-    savePrefs();
-    render();
-  });
-
-  el.toggleHome.addEventListener('click', () => {
-    prefs.hideHomeDaycares = !prefs.hideHomeDaycares;
-    savePrefs();
-    render();
-  });
-
-  el.toggleSchool.addEventListener('click', () => {
-    prefs.hideSchoolPrograms = !prefs.hideSchoolPrograms;
-    savePrefs();
-    render();
-  });
-
-  el.togglePlayground.addEventListener('click', () => {
-    prefs.hidePlaygroundUnlikely = !prefs.hidePlaygroundUnlikely;
+  el.toggleHidden.addEventListener('click', () => {
+    prefs.showHidden = !prefs.showHidden;
     savePrefs();
     render();
   });
@@ -708,10 +743,9 @@
   $('btn-clear').addEventListener('click', () => {
     prefs.search = '';
     prefs.status = 'all';
-    prefs.hideFranchises = false;
-    prefs.hideHomeDaycares = false;
-    prefs.hideSchoolPrograms = false;
-    prefs.hidePlaygroundUnlikely = false;
+    // Clear returns to the assumed-clean list: junk hidden, nothing restored.
+    prefs.restored = [];
+    prefs.showHidden = false;
     prefs.maxDistanceM = 48280;
     savePrefs();
     render();
