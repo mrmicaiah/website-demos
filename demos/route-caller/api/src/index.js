@@ -196,7 +196,8 @@ const selectRoute = (env, id) =>
 
 async function selectFacilities(env, routeId) {
   const { results } = await env.DB.prepare(
-    'SELECT * FROM facilities WHERE route_id = ? ORDER BY position_along_route_m ASC'
+    `SELECT * FROM facilities WHERE route_id = ?
+      ORDER BY position_along_route_m ASC, distance_from_route_m ASC, name ASC`
   )
     .bind(routeId)
     .all();

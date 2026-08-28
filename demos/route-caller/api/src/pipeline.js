@@ -66,6 +66,19 @@ export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000) 
       is_home_daycare: isHomeDaycare(f.name, f.tags) ? 1 : 0,
     });
   }
-  placed.sort((a, b) => a.position_along_route_m - b.position_along_route_m);
+  placed.sort(byDriveOrder);
   return placed;
+}
+
+/**
+ * Drive order. Facilities beside or behind an endpoint all clamp to the same
+ * position, so distance off route breaks the tie (closest first) and the name
+ * settles the rest — otherwise the order of a cluster is arbitrary.
+ */
+export function byDriveOrder(a, b) {
+  return (
+    (a.position_along_route_m || 0) - (b.position_along_route_m || 0) ||
+    (a.distance_from_route_m || 0) - (b.distance_from_route_m || 0) ||
+    String(a.name || '').localeCompare(String(b.name || ''))
+  );
 }

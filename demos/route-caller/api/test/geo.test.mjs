@@ -8,7 +8,7 @@ import {
   nearestOnRoute,
   samplePointsAlong,
 } from '../src/geo.js';
-import { mergeCandidates, placeOnRoute } from '../src/pipeline.js';
+import { mergeCandidates, placeOnRoute, byDriveOrder } from '../src/pipeline.js';
 import { isFranchise, isHomeDaycare, normalizeName } from '../src/heuristics.js';
 
 let passed = 0;
@@ -185,6 +185,43 @@ check('facilities beyond the corridor are discarded and the rest come back in dr
   assert(placed[0].name === 'South Preschool', 'drive order');
   assert(placed[1].name === 'North Preschool', 'drive order');
   assert(placed[0].distance_from_route_m < 1000, 'distance recorded');
+});
+
+check('facilities clamped to the same position sort closest-to-route first', () => {
+  // All three sit beside the start of the route, so they clamp to position 0
+  // and only distance off route can order them.
+  const placed = placeOnRoute(
+    [
+      { name: 'Far Side Daycare', lat: 38.95, lng: -76.90, source: 'google', tags: {} },
+      { name: 'Near Side Daycare', lat: 38.98, lng: -77.00, source: 'google', tags: {} },
+      { name: 'Middle Daycare', lat: 38.96, lng: -76.95, source: 'google', tags: {} },
+    ],
+    index,
+    16000
+  );
+  assert(placed.length === 3, `expected 3, got ${placed.length}`);
+  assert(
+    placed.every((f) => f.position_along_route_m === 0),
+    'all three should clamp to the route start'
+  );
+  assert(
+    placed.map((f) => f.name).join(' < ') ===
+      'Near Side Daycare < Middle Daycare < Far Side Daycare',
+    `got ${placed.map((f) => `${f.name}@${f.distance_from_route_m}m`).join(', ')}`
+  );
+});
+check('a tie on position and distance falls back to name', () => {
+  const rows = [
+    { name: 'Zebra Learning', position_along_route_m: 0, distance_from_route_m: 500 },
+    { name: 'Acorn Learning', position_along_route_m: 0, distance_from_route_m: 500 },
+  ];
+  assert(rows.slice().sort(byDriveOrder)[0].name === 'Acorn Learning', 'name breaks the last tie');
+  assert(byDriveOrder(rows[0], rows[0]) === 0, 'a row equals itself');
+});
+check('position still outranks distance', () => {
+  const early = { name: 'B', position_along_route_m: 1000, distance_from_route_m: 9000 };
+  const late = { name: 'A', position_along_route_m: 2000, distance_from_route_m: 100 };
+  assert(byDriveOrder(early, late) < 0, 'earlier on the route wins regardless of offset');
 });
 
 console.log('heuristics');

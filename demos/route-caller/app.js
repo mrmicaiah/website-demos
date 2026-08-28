@@ -273,11 +273,20 @@
 
     list = list.slice().sort((a, b) =>
       prefs.sort === 'capacity'
-        ? (b.capacity ?? -1) - (a.capacity ?? -1) ||
-          (a.position_along_route_m || 0) - (b.position_along_route_m || 0)
-        : (a.position_along_route_m || 0) - (b.position_along_route_m || 0)
+        ? (b.capacity ?? -1) - (a.capacity ?? -1) || byDriveOrder(a, b)
+        : byDriveOrder(a, b)
     );
     return list;
+  }
+
+  /* Mirrors the API's ORDER BY: position, then distance off route so the
+     facilities clamped to a route endpoint come back closest-first, then name. */
+  function byDriveOrder(a, b) {
+    return (
+      (a.position_along_route_m || 0) - (b.position_along_route_m || 0) ||
+      (a.distance_from_route_m || 0) - (b.distance_from_route_m || 0) ||
+      String(a.name || '').localeCompare(String(b.name || ''))
+    );
   }
 
   function render() {
