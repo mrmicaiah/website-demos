@@ -2,7 +2,13 @@
 // checks can exercise it directly.
 
 import { haversineMeters, nearestOnRoute } from './geo.js';
-import { normalizeName, isFranchise, isHomeDaycare, isSchoolProgram } from './heuristics.js';
+import {
+  normalizeName,
+  isFranchise,
+  isHomeDaycare,
+  isSchoolProgram,
+  isPlaygroundUnlikely,
+} from './heuristics.js';
 
 const DEDUPE_RADIUS_M = 150;
 
@@ -101,6 +107,7 @@ function absorb(target, incoming) {
   target.city = target.city || incoming.city;
   target.zip = target.zip || incoming.zip;
   target.primaryType = target.primaryType || incoming.primaryType || null;
+  target.website = target.website || incoming.website || null;
   target.tags = { ...(incoming.tags || {}), ...(target.tags || {}) };
   if (target.source !== incoming.source) target.source = 'both';
 }
@@ -109,7 +116,7 @@ function absorb(target, incoming) {
  * Attach corridor geometry and flags, drop anything further than
  * `maxDistanceMeters` from the polyline, and return in drive order.
  */
-export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000) {
+export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000, playgrounds = []) {
   const placed = [];
   for (const f of facilities) {
     const { distanceMeters, positionMeters } = nearestOnRoute(routeIndex, f);
@@ -117,11 +124,14 @@ export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000) 
     placed.push({
       ...f,
       primaryType: f.primaryType || null,
+      website: f.website || null,
       distance_from_route_m: Math.round(distanceMeters),
       position_along_route_m: Math.round(positionMeters),
       is_franchise: isFranchise(f.name) ? 1 : 0,
       is_home_daycare: isHomeDaycare(f.name, f.tags) ? 1 : 0,
       is_school_program: isSchoolProgram(f.name, f.tags, f.primaryType) ? 1 : 0,
+      is_playground_nearby: hasPlaygroundWithin(f, playgrounds) ? 1 : 0,
+      is_playground_unlikely: isPlaygroundUnlikely(f.name, f.primaryType) ? 1 : 0,
     });
   }
   placed.sort(byDriveOrder);
@@ -162,4 +172,20 @@ export function summarizeExcluded(excluded, routeIndex, maxDistanceMeters = 1600
     maxDistanceMeters
   ).length;
   return { raw: excluded.length, effective, types };
+}
+
+const PLAYGROUND_RADIUS_M = 100;
+
+/**
+ * True when OpenStreetMap has a playground mapped within 100 m of the facility.
+ *
+ * This is a signal, not a fact. A false means "OSM has no playground mapped
+ * here", which is very different from "there is no playground here" — OSM
+ * coverage of private playgrounds is thin and inconsistent. So a positive is
+ * shown as a badge and a negative is shown as nothing at all; there is no
+ * "no playground" badge and no hide toggle on this signal.
+ */
+export function hasPlaygroundWithin(facility, playgrounds = [], radiusMeters = PLAYGROUND_RADIUS_M) {
+  if (!playgrounds.length || facility.lat == null || facility.lng == null) return false;
+  return playgrounds.some((p) => haversineMeters(facility, p) <= radiusMeters);
 }

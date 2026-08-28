@@ -17,6 +17,7 @@ const FULL_MASK = [
   'places.location',
   'places.primaryType',
   'places.nationalPhoneNumber',
+  'places.websiteUri',
   'places.addressComponents',
 ].join(',');
 
@@ -24,6 +25,9 @@ const FULL_MASK = [
 // in the same Pro tier as displayName/formattedAddress/location, so keeping it here
 // costs nothing the lean mask wasn't already paying — and the retail deny-list needs
 // it. If a response omits it anyway, the deny-list fails open and keeps the row.
+// `websiteUri` is deliberately NOT here: it bills with the phone fields in the
+// Enterprise tier, and the whole point of the lean mask is to stay Pro-only. Under
+// the fallback, rows simply come back with website null.
 const LEAN_MASK = [
   'places.id',
   'places.displayName',
@@ -185,6 +189,7 @@ function toCandidate(place) {
     city: componentValue(place.addressComponents, 'locality') || parsed.city,
     zip: componentValue(place.addressComponents, 'postal_code') || parsed.zip,
     phone: place.nationalPhoneNumber || null,
+    website: place.websiteUri || null,
     lat: place.location?.latitude,
     lng: place.location?.longitude,
     primaryType: place.primaryType || null,

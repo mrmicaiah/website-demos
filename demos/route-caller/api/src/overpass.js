@@ -15,11 +15,14 @@ export function buildQuery(samplePoints, radiusMeters = 16000) {
     .map((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`)
     .join(',');
   const around = `(around:${radiusMeters},${coords})`;
-  return `[out:json][timeout:60];
+  // Facilities and mapped playgrounds come back in one query — still a single
+  // request, still one round of Overpass etiquette. They are told apart on tags.
+  return `[out:json][timeout:90];
 (
   nwr["amenity"="childcare"]${around};
   nwr["amenity"="kindergarten"]${around};
   nwr["preschool"="yes"]${around};
+  nwr["leisure"="playground"]${around};
 );
 out center tags;`;
 }
@@ -33,7 +36,23 @@ export async function fetchOverpass(samplePoints, radiusMeters = 16000) {
   }
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
   const data = await res.json();
-  return (data.elements || []).map(toCandidate).filter((c) => c.lat != null && c.name);
+  const elements = data.elements || [];
+
+  const playgrounds = [];
+  const facilities = [];
+  for (const el of elements) {
+    const tags = el.tags || {};
+    const lat = el.lat ?? el.center?.lat;
+    const lng = el.lon ?? el.center?.lon;
+    if (lat == null || lng == null) continue;
+    if (tags.leisure === 'playground') {
+      playgrounds.push({ lat, lng });
+      continue;
+    }
+    const candidate = toCandidate(el);
+    if (candidate.name) facilities.push(candidate);
+  }
+  return { facilities, playgrounds };
 }
 
 function post(query) {
@@ -63,6 +82,7 @@ function toCandidate(el) {
     city: tags['addr:city'] || null,
     zip: tags['addr:postcode'] || null,
     phone: tags.phone || tags['contact:phone'] || null,
+    website: tags.website || tags['contact:website'] || null,
     lat,
     lng,
     source: 'osm',

@@ -100,9 +100,13 @@ async function createRoute(request, env) {
 
   let osmStatus = 'ok';
   let osmResults = [];
+  let playgrounds = [];
   try {
-    osmResults = await fetchOverpass(samples, CORRIDOR_M);
+    const overpass = await fetchOverpass(samples, CORRIDOR_M);
+    osmResults = overpass.facilities;
+    playgrounds = overpass.playgrounds;
   } catch (err) {
+    // Google-only fallback: facilities still found, but no playground signal.
     osmStatus = `unavailable: ${String(err.message).slice(0, 120)}`;
   }
 
@@ -121,7 +125,8 @@ async function createRoute(request, env) {
   const facilities = placeOnRoute(
     mergeCandidates([kept, osmResults]),
     routeIndex,
-    CORRIDOR_M
+    CORRIDOR_M,
+    playgrounds
   );
 
   const routeId = crypto.randomUUID();
@@ -137,15 +142,17 @@ async function createRoute(request, env) {
     statements.push(
       env.DB.prepare(
         `INSERT INTO facilities
-           (id, route_id, name, address, city, zip, phone, lat, lng, source, primary_type,
-            distance_from_route_m, position_along_route_m,
-            is_franchise, is_home_daycare, is_school_program)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (id, route_id, name, address, city, zip, phone, website, lat, lng,
+            source, primary_type, distance_from_route_m, position_along_route_m,
+            is_franchise, is_home_daycare, is_school_program,
+            playground_nearby, playground_unlikely)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
-        f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.lat, f.lng, f.source,
-        f.primaryType || null,
+        f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.website || null,
+        f.lat, f.lng, f.source, f.primaryType || null,
         f.distance_from_route_m, f.position_along_route_m,
-        f.is_franchise, f.is_home_daycare, f.is_school_program
+        f.is_franchise, f.is_home_daycare, f.is_school_program,
+        f.is_playground_nearby, f.is_playground_unlikely
       )
     );
   }

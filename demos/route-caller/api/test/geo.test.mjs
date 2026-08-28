@@ -15,12 +15,14 @@ import {
   partitionRetail,
   isRetailNonChildcare,
   summarizeExcluded,
+  hasPlaygroundWithin,
 } from '../src/pipeline.js';
 import {
   isFranchise,
   isHomeDaycare,
   normalizeName,
   isSchoolProgram,
+  isPlaygroundUnlikely,
 } from '../src/heuristics.js';
 
 let passed = 0;
@@ -371,10 +373,23 @@ check('name normalization strips punctuation and corporate suffixes', () => {
 });
 
 console.log('school / Head Start flag');
-check('authoritative school types are flagged', () => {
-  assert(isSchoolProgram('Whitesburg Elementary School', {}, 'primary_school'));
-  assert(isSchoolProgram('Academy For Academics & Arts Middle', {}, 'school'));
-  assert(isSchoolProgram('Grace Lutheran School', {}, 'secondary_school'));
+check('specific school types flag on their own', () => {
+  assert(isSchoolProgram('Beecher Road Elementary School', {}, 'primary_school'));
+  assert(isSchoolProgram('Gales Ferry School', {}, 'primary_school'));
+  assert(isSchoolProgram('Barnard Environmental Science & Technology School', {}, 'primary_school'));
+  assert(isSchoolProgram('Central High', {}, 'secondary_school'));
+});
+check('a bare `school` type is NOT enough on its own', () => {
+  // It caught Montessoris and parochial schools far more often than public ones.
+  assert(!isSchoolProgram('Whitby School', {}, 'school'));
+  assert(!isSchoolProgram('The Bright School', {}, 'school'));
+  assert(!isSchoolProgram('Friendship School', {}, 'school'));
+  assert(!isSchoolProgram('Barnum School', {}, 'school'));
+});
+check('a bare `school` type flags when a public name agrees', () => {
+  assert(isSchoolProgram('Whitesburg Elementary School', {}, 'school'));
+  assert(isSchoolProgram('Jasper Head Start Center', {}, 'school'));
+  assert(isSchoolProgram('Central City Schools', {}, 'school'));
 });
 check('child care types are never flagged by type', () => {
   assert(!isSchoolProgram('West Madison Pre-K School', {}, 'preschool'));
@@ -421,14 +436,41 @@ check('a school word alongside a child care word is NOT flagged on name alone', 
     assert(!isSchoolProgram(name), `${name} should stay visible`);
   }
 });
-check('but an authoritative school type overrides the child care word in the name', () => {
-  assert(
-    isSchoolProgram('Little Scholars Elementary Prep Daycare', {}, 'primary_school'),
-    'primaryType wins over the name guard'
-  );
+check('private schools are prospects and are never flagged, whatever the type says', () => {
+  // Her decision after the first cut hid forty rows on one route, most private.
+  const prospects = [
+    ['Elm City Montessori School', 'school'],
+    ["The Children's School", 'primary_school'],
+    ['Alphabet Academy, North Campus', 'school'],
+    ['All Saints Catholic School - Preschool to Grade 8', 'school'],
+    ['Hamden Hall Country Day School', 'primary_school'],
+    ['N Stonington Christian Academy', 'primary_school'],
+    ['Bi-Cultural Hebrew Academy of Connecticut', 'school'],
+    ['Grace Lutheran School', 'school'],
+    ['Our Lady of Mercy Preparatory Academy', 'school'],
+    ['Seven Acres Montessori', 'school'],
+    ['Little Scholars Elementary Prep Daycare', 'primary_school'],
+  ];
+  for (const [name, type] of prospects) {
+    assert(!isSchoolProgram(name, {}, type), `${name} (${type}) must stay on her list`);
+  }
+});
+check('the public rows she actually wants hidden are still flagged', () => {
+  const hide = [
+    ['Beecher Road Elementary School', 'primary_school'],
+    ['Lulac Head Start Inc', 'child_care_agency'],
+    ['Guilford Lakes Elementary School', 'primary_school'],
+    ['Martin Luther King Junior Elementary School', 'primary_school'],
+    ['Huntsville City Schools', null],
+    ['Decatur Board of Education', null],
+  ];
+  for (const [name, type] of hide) {
+    assert(isSchoolProgram(name, {}, type), `${name} (${type}) should be hidden`);
+  }
 });
 check('ordinary child care names are untouched', () => {
   const untouched = [
+    'Academy For Academics & Arts Middle',
     'Sunny Days Learning Center',
     'KinderCare Learning Center',
     'Montessori School Of Madison',
@@ -454,6 +496,106 @@ check('placeOnRoute sets is_school_program alongside the other flags', () => {
   assert(school.is_school_program === 1, 'school flagged');
   assert(daycare.is_school_program === 0, 'daycare not flagged');
   assert(school.is_franchise === 0 && school.is_home_daycare === 0, 'flags are independent');
+});
+
+
+console.log('playground signals');
+check('shapes with no outdoor play are marked unlikely', () => {
+  const unlikely = [
+    ['Kumon Math and Reading Center of Madison', null],
+    ['Mathnasium of Huntsville', null],
+    ['Sylvan Learning of Decatur', null],
+    ['Bright Star Tutoring', null],
+    ['Elite Test Prep', null],
+    ['Russian School of Mathematics - RSM Stamford', 'school'],
+    ['Huntsville School of Dance', null],
+    ['Ballet Arts of Madison', null],
+    ['Tiger Martial Arts', null],
+    ['Elite Taekwondo', null],
+    ['Goldfish Swim School', null],
+    ['Vivace School of Music', null],
+  ];
+  for (const [name, type] of unlikely) {
+    assert(isPlaygroundUnlikely(name, type), `${name} should be marked unlikely`);
+  }
+});
+check('it NEVER fires on her core market types, whatever the name says', () => {
+  assert(!isPlaygroundUnlikely('Kumon Kids Childcare', 'child_care_agency'));
+  assert(!isPlaygroundUnlikely('Dance & Play Preschool', 'preschool'));
+  assert(!isPlaygroundUnlikely('Little Ballet Academy', 'child_care_agency'));
+  assert(!isPlaygroundUnlikely('Martial Arts Daycare', 'preschool'));
+});
+check('a child care word in the name is enough doubt to keep the row', () => {
+  assert(!isPlaygroundUnlikely('Ballet & Beyond Daycare', null));
+  assert(!isPlaygroundUnlikely('Karate Kids Child Care', null));
+  assert(!isPlaygroundUnlikely('Swim School Preschool', null));
+});
+check('real prospects are not marked unlikely', () => {
+  const keep = [
+    ['Sunny Days Learning Center', 'child_care_agency'],
+    ['YMCA of Huntsville', 'gym'],
+    ['Gymnastics World', null],
+    ['Boys & Girls Clubs of North Alabama', null],
+    ['St Paul Lutheran Church Preschool', 'preschool'],
+    ['Bright Beginnings Academy', null],
+  ];
+  for (const [name, type] of keep) {
+    assert(!isPlaygroundUnlikely(name, type), `${name} should stay visible`);
+  }
+});
+check('a mapped playground within 100 m sets the nearby signal', () => {
+  const facility = { lat: 39.2, lng: -77.0 };
+  // ~55 m north
+  assert(hasPlaygroundWithin(facility, [{ lat: 39.20050, lng: -77.0 }]), 'within 100 m');
+  // ~333 m north
+  assert(!hasPlaygroundWithin(facility, [{ lat: 39.2030, lng: -77.0 }]), 'beyond 100 m');
+  assert(!hasPlaygroundWithin(facility, []), 'no playgrounds mapped at all');
+  assert(!hasPlaygroundWithin({ lat: null, lng: null }, [{ lat: 39.2, lng: -77.0 }]), 'no coords');
+});
+check('the nearby signal picks the closest of several playgrounds', () => {
+  const facility = { lat: 39.2, lng: -77.0 };
+  const playgrounds = [
+    { lat: 39.25, lng: -77.0 },
+    { lat: 39.2008, lng: -77.0 },
+    { lat: 39.3, lng: -77.0 },
+  ];
+  assert(hasPlaygroundWithin(facility, playgrounds), 'one of them is close enough');
+});
+check('placeOnRoute sets both playground columns', () => {
+  const placed = placeOnRoute(
+    [
+      { name: 'Sunny Days Learning Center', lat: 39.2, lng: -77.0, source: 'google', primaryType: 'child_care_agency', tags: {} },
+      { name: 'Kumon of Ashland', lat: 39.3, lng: -77.0, source: 'google', primaryType: null, tags: {} },
+    ],
+    index,
+    16000,
+    [{ lat: 39.2004, lng: -77.0 }]
+  );
+  const daycare = placed.find((f) => f.name.includes('Sunny'));
+  const kumon = placed.find((f) => f.name.includes('Kumon'));
+  assert(daycare.is_playground_nearby === 1, 'playground mapped next door');
+  assert(daycare.is_playground_unlikely === 0, 'core market never unlikely');
+  assert(kumon.is_playground_nearby === 0, 'no playground near the Kumon');
+  assert(kumon.is_playground_unlikely === 1, 'tutoring is unlikely');
+});
+
+console.log('website capture');
+check('website survives placement and merging', () => {
+  const merged = mergeCandidates([
+    [{ name: 'O2B Kids', lat: 39.2, lng: -77.0, phone: null, website: null, source: 'osm', tags: {} }],
+    [{ name: 'O2B Kids', lat: 39.2005, lng: -77.0, phone: '(256) 449-8558', website: 'https://o2bkids.com', source: 'google', tags: {} }],
+  ]);
+  assert(merged.length === 1 && merged[0].website === 'https://o2bkids.com', 'website carried through merge');
+  const placed = placeOnRoute(merged, index, 16000);
+  assert(placed[0].website === 'https://o2bkids.com', 'and through placement');
+});
+check('a missing website is null, not undefined — no website is a real signal', () => {
+  const placed = placeOnRoute(
+    [{ name: 'Little Acorns', lat: 39.2, lng: -77.0, source: 'osm', tags: {} }],
+    index,
+    16000
+  );
+  assert(placed[0].website === null, `expected null, got ${placed[0].website}`);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

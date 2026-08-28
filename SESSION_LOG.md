@@ -5,6 +5,94 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — Narrowed schools, website capture, playground signals
+
+Three user-driven changes, all of them sharpened by one fact that had been
+missing from the docs until now: **she sells playground equipment.** That single
+piece of context settles most of the judgment calls below, and it is now the
+first thing `CONTEXT.md` says about her.
+
+### Narrowing the school rule
+
+Her decision, after seeing the first cut hide forty rows on the Connecticut
+route. Public schools are the target; private schools, academies, Montessoris
+and religious schools are **prospects** — they buy playgrounds, districts don't.
+
+A bare `primaryType: school` is no longer sufficient evidence; it flags only
+when a public-school name agrees. `primary_school`/`secondary_school`, Head
+Start, and the public-name patterns still flag on their own. On top of that, any
+private or religious marker in the name vetoes every other signal.
+
+That veto was not in the brief, and it was needed: the brief said
+`primary_school` should still flag while also naming "The Children's School" —
+which Google types `primary_school` — as a row that must **not** flag. The two
+instructions conflict, and the veto resolves them in the direction her stated
+rationale points, which is the one that keeps prospects on the list. Same for
+"Country School", added to the private markers alongside "Country Day" after
+New Canaan Country School survived the first pass.
+
+Connecticut went from 40 flags to 10. Decatur from 8 to 4 — Grace Lutheran,
+Valley Fellowship Christian Academy, Montessori School of Huntsville and a
+public magnet named "Academy For Academics & Arts" all came back onto her list.
+The magnet is a genuine false negative and it stays: a wasted call is cheaper
+than a hidden prospect, and that asymmetry is now written into `CONTEXT.md` as
+the general rule for this class of heuristic.
+
+Four private schools still slip through on Connecticut. Recorded in `STATE.md`
+rather than chased with more guard words, because over-guarding would let real
+public schools back in and the next pass should be hers, not mine.
+
+### Website capture
+
+`websiteUri` bills with the phone fields in the Enterprise tier, so it went into
+the full Places mask only. The lean fallback stays deliberately Pro-only: under
+it, rows simply come back with `website` null. OSM `website`/`contact:website`
+tags are captured too.
+
+The interesting part was the UI. "No website" is a prospecting signal she wants
+to *see* — a facility with no web presence is one nobody else is calling — so it
+renders as a badge rather than being hidden. But Connecticut can never be
+re-ingested, so all 213 of its rows have `website` null, and every one of them
+would have worn that badge. The badge is now suppressed on any route where no
+row has a website at all: in that case the null describes the ingest, not the
+facility. A signal you can't stand behind is worse than no signal.
+
+### Playground signals, and why they are signals
+
+`playground_nearby` comes from OSM `leisure=playground` within 100 m, folded
+into the existing batched Overpass query rather than added as a second request.
+It is reported as a badge when true and as *nothing* when false — there is no
+"no playground" badge and no toggle — because OSM's coverage of private
+playgrounds is thin and a 0 means "not mapped", not "not there". Ten of the 72
+Decatur rows have one mapped.
+
+`playground_unlikely` is a structural guess about facility shape: tutoring,
+music, dance, martial arts, swim. It is conservative on purpose and guarded
+twice — never on a `child_care_agency` or `preschool` type, never on a name
+carrying a child-care word — because the costs are asymmetric in the same
+direction as everything else here. Gyms, YMCAs and gymnastics centres were
+deliberately left out: they run children's programs with outdoor space.
+
+### Data refresh
+
+Call activity was re-checked live before anything was deleted, not taken from
+the previous report. Decatur and gatlingburg were clean and were re-ingested;
+Connecticut has a real call on it and was backfilled in place by `UPDATE`,
+touching only the two flag columns. Its one called row was checked against both
+classifiers first — it stays visible.
+
+Worth noting for confidence in the backfill: after re-ingesting, the two rebuilt
+routes were run back through the same reconcile script, and it found **zero**
+rows to change on either. The ingest path and the backfill path agree.
+
+Overpass gave gatlingburg HTTP 521 twice, including after the retry set was
+widened to cover it, so that route is Google-only and has no playground data at
+all. Decatur, ingested minutes earlier, got a clean `ok`. The likely cause is
+query size and the likely fix is chunking the corridor query; both are in
+`STATE.md`.
+
+---
+
 ## 2026-08-28 — Hide schools & Head Starts (first user-driven feature)
 
 The caller's first feature request, and the first change driven by someone

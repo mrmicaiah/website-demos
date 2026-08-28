@@ -242,6 +242,21 @@ body {
   white-space: nowrap;
 }
 .fac-sub { color: var(--muted); font-size: 0.84rem; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.flag-badge {
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.flag-badge.playground { background: var(--green-pill); color: var(--green-pill-text); }
+.flag-badge.no-website {
+  background: #F1EFE9;
+  color: #8A8577;
+  font-weight: 600;
+}
+
 .src-badge {
   border: 1px solid var(--line);
   border-radius: 5px;

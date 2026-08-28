@@ -14,6 +14,7 @@ demos/route-caller/
     src/{index,geo,google,overpass,pipeline,heuristics}.js
     migrations/0001_init.sql  0002_add_primary_type.sql
                               0003_add_is_school_program.sql
+                              0004_add_website_and_playground.sql
     test/geo.test.mjs
 ```
 
@@ -152,7 +153,7 @@ static server (`npx serve demos/route-caller`).
 cd demos/route-caller/api && node test/geo.test.mjs
 ```
 
-45 checks over the corridor math and merge logic: polyline decoding against
+57 checks over the corridor math and merge logic: polyline decoding against
 Google's reference string, haversine distances against known values,
 perpendicular distance to a route, projection along it (including L-shaped
 routes and points that clamp past either end), route simplification, sampling,

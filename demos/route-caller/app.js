@@ -48,6 +48,7 @@
     toggleFranchise: $('toggle-franchise'),
     toggleHome: $('toggle-home'),
     toggleSchool: $('toggle-school'),
+    togglePlayground: $('toggle-playground'),
     toggleMap: $('toggle-map'),
     mapPanel: $('map-panel'),
     cards: $('cards'),
@@ -63,6 +64,7 @@
       hideFranchises: true,
       hideHomeDaycares: true,
       hideSchoolPrograms: true,
+      hidePlaygroundUnlikely: true,
       search: '',
       status: 'all',
       mapOpen: false,
@@ -266,17 +268,20 @@
       if (prefs.hideFranchises && f.is_franchise) return false;
       if (prefs.hideHomeDaycares && f.is_home_daycare) return false;
       if (prefs.hideSchoolPrograms && f.is_school_program) return false;
+      if (prefs.hidePlaygroundUnlikely && f.playground_unlikely) return false;
       return true;
     });
   }
 
   function visibleFacilities() {
     const term = prefs.search.trim().toLowerCase();
+    const websiteData = routeHasWebsiteData();
     let list = listScope().filter((f) => {
       if (prefs.status === 'not_called' && f.status !== 'not_called') return false;
       if (prefs.status === 'called' && f.status === 'not_called') return false;
       if (prefs.status === 'flagged' && !f.flagged) return false;
       if (prefs.status === 'interested' && f.status !== 'interested') return false;
+      if (prefs.status === 'no_website' && (f.website || !websiteData)) return false;
       if (term) {
         const hay = [f.name, f.city, f.zip, f.address].filter(Boolean).join(' ').toLowerCase();
         if (!hay.includes(term)) return false;
@@ -302,9 +307,18 @@
     );
   }
 
+  /* True when this route was ingested before website capture existed (or with
+     Places under the lean mask): every row is null, so "no website" would be a
+     property of the ingest, not of the facility. Don't show a prospecting signal
+     we can't actually stand behind. */
+  function routeHasWebsiteData() {
+    return state.facilities.some((f) => f.website);
+  }
+
   function render() {
     if (!state.route) return;
     const list = visibleFacilities();
+    const websiteDataAvailable = routeHasWebsiteData();
 
     el.badge.textContent = routeBadge(state.route.name);
     el.title.textContent = `${state.route.name} — Call List`;
@@ -313,6 +327,7 @@
     if (prefs.hideFranchises) hidden.push('franchises');
     if (prefs.hideHomeDaycares) hidden.push('home daycares');
     if (prefs.hideSchoolPrograms) hidden.push('schools');
+    if (prefs.hidePlaygroundUnlikely) hidden.push('no-playground types');
     el.subtitle.textContent =
       `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}` +
       (hidden.length ? ` · ${hidden.join(' and ')} hidden` : ' · showing everything');
@@ -329,9 +344,10 @@
     el.toggleFranchise.setAttribute('aria-pressed', String(prefs.hideFranchises));
     el.toggleHome.setAttribute('aria-pressed', String(prefs.hideHomeDaycares));
     el.toggleSchool.setAttribute('aria-pressed', String(prefs.hideSchoolPrograms));
+    el.togglePlayground.setAttribute('aria-pressed', String(prefs.hidePlaygroundUnlikely));
 
     el.cards.innerHTML = '';
-    list.forEach((f) => el.cards.append(facilityCard(f)));
+    list.forEach((f) => el.cards.append(facilityCard(f, websiteDataAvailable)));
 
     el.empty.hidden = list.length > 0;
     if (!list.length) {
@@ -346,7 +362,7 @@
     if (prefs.mapOpen) drawMap(list);
   }
 
-  function facilityCard(f) {
+  function facilityCard(f, websiteDataAvailable = true) {
     const card = document.createElement('article');
     card.className = 'fac-card' + (f.status !== 'not_called' ? ' is-called' : '');
     card.id = `fac-${f.id}`;
@@ -378,6 +394,21 @@
     sub.className = 'fac-sub';
     const where = [[f.city, f.zip].filter(Boolean).join(' '), f.license_no].filter(Boolean).join(' · ');
     if (where) sub.append(document.createTextNode(where));
+    if (f.playground_nearby) {
+      const pill = document.createElement('span');
+      pill.className = 'flag-badge playground';
+      pill.textContent = 'playground on site';
+      pill.title = 'OpenStreetMap has a playground mapped within 100 m. A signal, not a guarantee.';
+      sub.append(pill);
+    }
+    if (!f.website && websiteDataAvailable) {
+      // Deliberately visible: no website is a prospecting signal she wants.
+      const pill = document.createElement('span');
+      pill.className = 'flag-badge no-website';
+      pill.textContent = 'no website';
+      sub.append(pill);
+    }
+
     const src = document.createElement('span');
     src.className = 'src-badge';
     src.textContent = f.source === 'both' ? 'BOTH' : f.source === 'osm' ? 'OSM' : 'G';
@@ -611,6 +642,12 @@
     render();
   });
 
+  el.togglePlayground.addEventListener('click', () => {
+    prefs.hidePlaygroundUnlikely = !prefs.hidePlaygroundUnlikely;
+    savePrefs();
+    render();
+  });
+
   el.toggleMap.addEventListener('click', () => {
     prefs.mapOpen = !prefs.mapOpen;
     savePrefs();
@@ -625,6 +662,7 @@
     prefs.hideFranchises = false;
     prefs.hideHomeDaycares = false;
     prefs.hideSchoolPrograms = false;
+    prefs.hidePlaygroundUnlikely = false;
     savePrefs();
     render();
   });

@@ -21,8 +21,8 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   (Worker version `2f4086c7-1b56-4760-9284-6429b4e90381`).
   D1 database `route-caller-db`, id `dd62dbcf-fffd-4432-9e92-51422d16c194`.
   `GOOGLE_MAPS_API_KEY` is set; `/api/health` reports `google_key_configured: true`.
-- **Migrations `0001`, `0002_add_primary_type` and `0003_add_is_school_program`
-  are all applied remotely.**
+- **Migrations `0001` through `0004_add_website_and_playground` are all applied
+  remotely.**
 - **Retail deny-list** on `primaryType`, type-only and fail-open (see the locked
   decisions in `CONTEXT.md`).
 - **Drive-order tiebreak** — the three-key tuple, applied consistently in SQL,
@@ -33,37 +33,70 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   breakdown. On the seed route those were 6 and 20 respectively.
 - **`primary_type` observability** — Google's type is stored per row and
   returned by `GET`, so filter decisions are inspectable from the data.
-- **Hide schools & Head Starts toggle** — the caller's first feature request.
-  `is_school_program` is set at ingest and hidden by default behind a toggle
-  beside the existing two. A visibility flag, never a deletion.
-- **45 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+- **Hide schools & Head Starts toggle** — the caller's first feature request,
+  since **narrowed at her instruction** so that private schools, academies,
+  Montessoris and religious schools stay on the list as prospects. Only public
+  schools, elementary/secondary schools and Head Starts are hidden.
+- **Website capture and the "no website" badge** — `website` from Google
+  (`websiteUri`, Enterprise SKU, full mask only) and from OSM
+  `website`/`contact:website`. A missing website renders a low-weight badge and
+  has its own filter entry: it is a prospecting signal she wants, not a gap.
+- **Playground signals** — `playground_nearby` from OSM `leisure=playground`
+  within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
+  dance, martial arts and swim shapes (hidden by default behind a fourth
+  toggle). Signals, not facts — see `CONTEXT.md`.
+- **57 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
 
-All three carry school flags as of 2026-08-28; the two user-created routes were
-backfilled in place with the real classifier, never re-ingested.
+| route | id | rows | school | no-play | playground | no website | visible | calls |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Decatur to Huntsville Test | `db187c9d` | 72 | 4 | 0 | 10 | 19 | 57 | none |
+| here to gatlingburg | `916945f8` | 243 | 31 | 2 | 0 | 50 | 210 | none |
+| Connecticut to Rhode Island | `b18c249a` | 213 | 10 | 5 | 0 | — | 198 | **1 call** |
 
-| route | id | rows | franchise | school | visible | call activity |
-| --- | --- | --- | --- | --- | --- | --- |
-| Decatur to Huntsville Test | `960fa7a2` | 72 | 11 | 8 | 53 | none |
-| here to gatlingburg | `780452dd` | 243 | 20 | 57 | 166 | none |
-| Connecticut to Rhode Island | `b18c249a` | 213 | 19 | 40 | 150 | **1 call** |
+- **Decatur to Huntsville Test** and **here to gatlingburg** were re-ingested
+  2026-08-28 and carry the full field set natively: `website`, playground
+  signals, `primary_type`, and the narrowed school flags. Decatur got
+  `osm_status: ok`; gatlingburg did **not** (see below).
+- **Connecticut to Rhode Island has live call activity** — one row, "Play To
+  Learn Childcare", `no_answer`. **Never re-ingest this route**; that would
+  destroy her work. Flag columns are safe to `UPDATE` in place, which is how its
+  school and no-play flags were backfilled.
 
-- **Decatur to Huntsville Test** is the seed route, re-ingested 2026-08-28 so
-  every Google row carries `primary_type`. 88% phone coverage (63 of 72),
-  `osm_status: ok`. Clean state for the caller's first look. **Do not re-ingest
-  it casually**, and check for call activity first if you do.
-- **Connecticut to Rhode Island has live call activity** — one row,
-  "Play To Learn Childcare", `no_answer`. **Never re-ingest this route**; that
-  would destroy her work. It is safe to `UPDATE` flag columns on it, which is
-  how the school backfill was done.
-- **Both user-created routes are Google-only**: Overpass returned HTTP 521 when
-  they were built, so `osm_status` records `unavailable: Overpass HTTP 521` and
-  they carry no OSM rows at all. That is the graceful-degradation path working,
-  but it means they are missing OSM-only facilities. Re-ingesting would recover
-  those — viable for gatlingburg, **not** for Connecticut.
-- The seed route's 13 OSM rows have no `primary_type`, by design.
+#### The Connecticut enrichment gap
+
+Connecticut has **no `website` data and no `playground_nearby` data**, and it
+cannot get them without a re-ingest, which is forbidden. Both columns are
+NULL/0 across all 213 rows.
+
+The frontend handles this rather than lying about it: the "no website" badge is
+suppressed entirely on any route where *no* row has a website, because in that
+case the null is a property of the ingest, not of the facility. Without that
+guard all 213 Connecticut rows would have worn a false prospecting badge. The
+"No website" filter option is likewise inert on that route.
+
+**The fix, not yet built: a batched in-place enrichment endpoint** — something
+like `POST /api/routes/:id/enrich` that re-queries Places and Overpass for the
+route's existing rows and `UPDATE`s only the enrichment columns (`website`,
+`playground_nearby`, `primary_type`), never touching `status`, `flagged`,
+`notes`, or row identity. That is the general answer to "this route has call
+activity but stale enrichment", which will keep recurring as the schema grows.
+
+#### Overpass is intermittent, and gatlingburg is the casualty
+
+Overpass returned **HTTP 521** on both attempts at the gatlingburg route, so it
+is Google-only: no OSM facilities and, more importantly, **no playground data at
+all** (`playground_nearby` is 0 for all 243 rows, which means "not checked", not
+"no playgrounds"). The Decatur route, ingested minutes earlier and apparently
+minutes luckier, got `osm_status: ok`.
+
+The retry set was widened from {429, 504} to {429, 502, 503, 504, 521} and it
+still failed twice. The likely cause is query size — gatlingburg samples 25
+corridor points against Decatur's ~14, and the `around` linestring plus four tag
+clauses makes for a large query on a public endpoint. If this keeps happening,
+split the corridor query into chunks rather than raising the timeout.
 
 ## In flight
 
@@ -73,19 +106,14 @@ Nothing.
 
 1. **Push.** Micaiah pushes; workers do not. Run `git fetch` and check rather
    than assuming — origin has moved underneath this session before.
-2. **Confirm the school flag's edges with the caller — this got louder at
-   scale.** Backfilling the two longer routes showed the `primaryType: school`
-   branch does most of the work, and most of what it catches is *private*
-   schools, not public ones. On the Connecticut route only **4 of 40** flags
-   come from name evidence (Head Start / public-school patterns); the other 36
-   are type-only, and they include Montessori schools, "The Children's School",
-   "Alphabet Academy" and a dozen parochial schools — several of which are
-   plausible customers. She asked for public schools, elementary schools and
-   Head Starts. Nothing is lost (the toggle is reversible, no row was deleted),
-   but this needs her answer before the flag can be trusted. If she wants it
-   narrowed, the change is to stop treating bare `primaryType: school` as
-   sufficient on its own and require it to agree with a name signal — keeping
-   `primary_school`/`secondary_school` and the Head Start rule as they are.
+2. **Four private schools still slip through the narrowed school rule** on the
+   Connecticut route: Brunswick School's Lower School and Lower Middle School
+   (matches the "middle school" pattern), Father John V Doyle School and The
+   Wheeler School (`secondary_school`/`primary_school` with no private marker in
+   the name), and to a lesser degree Barnard Environmental. Ten flags, roughly
+   six of them genuinely public. Worth one pass with her over the remaining
+   names before adding more guard words — the risk of over-guarding is letting
+   real public schools back onto her list.
 3. **The rest of her feedback.** Still the gate on direction: **phase 2 (state
    licensing capacity data)** versus **corridor tuning** (radius, sampling
    density, coverage). Do not scope phase 2 before that conversation — the

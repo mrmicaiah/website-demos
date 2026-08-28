@@ -39,6 +39,13 @@ has those columns and the UI already renders them when non-null.
   reference** — route-caller was built to match what she is already fluent in,
   not to improve on it. When a design question comes up, "what does her
   reference do" outranks taste.
+- **What she sells: playground equipment, to child care facilities.** This is the
+  fact that settles most judgment calls, so reason from it rather than from
+  "child care" in the abstract. It is why a facility with no outdoor space is a
+  poor prospect and a church running a preschool is a good one; why a Montessori
+  school is a customer and a public elementary school is not; why "no website"
+  is a signal she wants to see rather than a gap to hide. When a rule is
+  ambiguous, ask who could actually buy a playground.
 - **Claude Code workers** (you) do the building.
 
 ## Operating model
@@ -96,6 +103,36 @@ them only with a reason better than the one recorded here.
 - **localStorage holds UI preferences only** (active route, sort, filters, map
   open/closed) plus a replay queue for `PATCH`es that failed while offline.
   Never call data.
+
+**Who gets hidden, and why it is always a toggle**
+
+- **Hiding is never deleting.** Franchises, home daycares, public schools and
+  no-outdoor-play shapes are all flags on the row with a toggle in the header.
+  The data stays in D1. A preference is not a fact about the world, and today's
+  "don't show me these" becomes next year's lead list.
+- **Public schools are the filter's target; private schools are prospects.** Her
+  decision, made after the first cut hid forty rows on one route and most of
+  them turned out to be Montessoris, country day schools and parochial schools —
+  exactly the places that buy playgrounds. So: `primary_school` and
+  `secondary_school` types flag; Head Start and public-school name patterns
+  flag; a bare `school` type does **not** flag on its own, only when a
+  public-school name agrees with it; and any private or religious marker in the
+  name vetoes all of it. A public magnet named "Academy" now shows on her list,
+  which is the intended trade — a wasted call is cheaper than a hidden prospect.
+- **That asymmetry is the general rule for this whole class of heuristic.** When
+  unsure whether to hide, don't.
+
+**Playground signals are signals, not facts**
+
+- `playground_nearby` means OpenStreetMap has a playground mapped within 100 m.
+  A 0 means "not mapped", never "not there" — OSM coverage of private
+  playgrounds is thin. So a positive renders a badge and a negative renders
+  nothing; there is no "no playground" badge and no toggle on it.
+- `playground_unlikely` is a structural guess about facility *shape* — tutoring,
+  music, dance, martial arts, swim — and it is deliberately conservative. It
+  never fires on anything Google types `child_care_agency` or `preschool`, and
+  never on a name carrying a child-care word. Gyms, YMCAs and gymnastics centres
+  are excluded from it on purpose: they run children's programs and buy.
 
 **Ordering**
 
