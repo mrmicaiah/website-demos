@@ -21,8 +21,8 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   (Worker version `2f4086c7-1b56-4760-9284-6429b4e90381`).
   D1 database `route-caller-db`, id `dd62dbcf-fffd-4432-9e92-51422d16c194`.
   `GOOGLE_MAPS_API_KEY` is set; `/api/health` reports `google_key_configured: true`.
-- **Migrations `0001_init.sql` and `0002_add_primary_type.sql` are both applied
-  remotely.**
+- **Migrations `0001`, `0002_add_primary_type` and `0003_add_is_school_program`
+  are all applied remotely.**
 - **Retail deny-list** on `primaryType`, type-only and fail-open (see the locked
   decisions in `CONTEXT.md`).
 - **Drive-order tiebreak** — the three-key tuple, applied consistently in SQL,
@@ -33,13 +33,23 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   breakdown. On the seed route those were 6 and 20 respectively.
 - **`primary_type` observability** — Google's type is stored per row and
   returned by `GET`, so filter decisions are inspectable from the data.
-- **36 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
-  Corridor math, sampling, dedupe, drive order, the deny-list, and the metrics.
+- **Hide schools & Head Starts toggle** — the caller's first feature request.
+  `is_school_program` is set at ingest and hidden by default behind a toggle
+  beside the existing two. A visibility flag, never a deletion.
+- **45 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+  Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
+  the school classifier in both directions.
 - **Seed route in the database**: "Decatur to Huntsville Test"
-  (`ec70336e-91ca-440b-8bb3-364728363e85`), **72 facilities, 88% phone coverage**
-  (63 of 72), sources google 57 / osm 13 / both 2, 11 franchise flags. Clean
-  state — everything `not_called`, all notes empty. Left deliberately as the
-  caller's first look. **Do not re-ingest it casually.**
+  (`960fa7a2-e150-47d8-9aaa-48a95ea4836f`, re-ingested 2026-08-28 so every
+  Google row carries `primary_type`), **72 facilities, 88% phone coverage**
+  (63 of 72), 11 franchise flags, 8 school flags, 53 visible under the three
+  default hides. Clean state — everything `not_called`, all notes empty.
+  **Do not re-ingest it casually**, and check for call activity first if you do.
+- **Two other routes exist on the live API**, created outside this worker
+  session: "Connecticut to Rhode Island" (213 facilities, **1 call logged — do
+  not re-ingest**) and "here to gatlingburg" (243, no activity). Both predate
+  the school classifier, so their school rows are unflagged; they would need a
+  re-ingest or a name-based backfill `UPDATE` to catch up.
 
 ## In flight
 
@@ -47,16 +57,20 @@ Nothing.
 
 ## Blocked / awaiting
 
-1. **Push.** As of this commit there is **1 unpushed commit on `main`** — this
-   one, the handoff docs. Everything before it is already on `origin`: Micaiah
-   pushed the three route-caller commits during the previous session, so the
-   backlog this task anticipated no longer exists. Micaiah pushes; workers do not.
-2. **The caller's first real session.** This is the gate on everything after it.
-   Her feedback decides the next direction: **phase 2 (state licensing capacity
-   data)** versus **corridor tuning** (radius, sampling density, result
-   coverage). Do not scope phase 2 before that conversation — the capacity pill
-   is the single most visible thing she does not have data for yet, and whether
-   it matters to her is exactly the unknown.
+1. **Push.** Micaiah pushes; workers do not. Run `git fetch` and check rather
+   than assuming — origin has moved underneath this session before.
+2. **Confirm the school flag's edges with the caller.** Three of the eight rows
+   it flags are *private* schools caught by `primaryType: school` — Montessori
+   School of Huntsville, Grace Lutheran School, Valley Fellowship Christian
+   Academy. She asked for public schools, elementary schools and Head Starts;
+   a Montessori school is plausibly a customer. Nothing is lost either way (the
+   toggle is reversible and the data is intact), but ask her before tightening
+   or loosening the rule. See the session log for the reasoning.
+3. **The rest of her feedback.** Still the gate on direction: **phase 2 (state
+   licensing capacity data)** versus **corridor tuning** (radius, sampling
+   density, coverage). Do not scope phase 2 before that conversation — the
+   capacity pill is the most visible thing she has no data for, and whether it
+   matters to her is exactly the unknown.
 
 ## Known gotchas
 
@@ -79,12 +93,11 @@ Nothing.
   ever changes, the Worker automatically retries with a lean field mask: results
   still come back, with fewer phone numbers. Don't mistake that fallback for a
   bug.
-- **Posh Mommy & Baby Too! survived the retail filter and its `primaryType` is
-  unknown.** It is Google-sourced, so it has one, and we know it is not among
-  the 26 denied types — but the row predates the `primary_type` column, so the
-  value isn't recorded. It will answer itself the next time that route is
-  ingested. Do not delete it on the strength of its name; that is precisely the
-  thing the deny-list exists to avoid.
+- **Posh Mommy & Baby Too! is resolved: Google types it `child_care_agency`.**
+  It is a genuine child care listing, not retail. Deleting it on the strength of
+  its name — which was proposed and declined — would have removed a real
+  facility from the caller's list. Kept as the standing example of why the
+  deny-list is type-only.
 - **Manager-side MCP pushes go straight to `origin` and will diverge from local
   worker commits.** This already happened once. When local commits are pending,
   route repo writes through the worker rather than through MCP, and `git fetch`
@@ -92,9 +105,11 @@ Nothing.
 
 ## Next session pickup
 
-1. Confirm the docs commit is pushed.
-2. Run the caller's first real session on the seed route.
-3. Gather her reactions specifically on **capacity badges** (does the missing
-   data matter, or is the name and phone enough?) and **corridor width** (is 10
-   miles right — too much driving, or not enough list?).
-4. Then, and only then, scope phase 2 against what she actually said.
+1. Confirm the outstanding commits are pushed (`git fetch` first).
+2. Put the school toggle in front of the caller and check the three private
+   schools listed above — flag them or not?
+3. Gather her reactions on **capacity badges** (does the missing data matter, or
+   are name and phone enough?) and **corridor width** (is 10 miles right — too
+   much driving, or not enough list?).
+4. Decide whether the two non-seed routes need a school-flag backfill.
+5. Then, and only then, scope phase 2 against what she actually said.

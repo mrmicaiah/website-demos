@@ -2,7 +2,7 @@
 // checks can exercise it directly.
 
 import { haversineMeters, nearestOnRoute } from './geo.js';
-import { normalizeName, isFranchise, isHomeDaycare } from './heuristics.js';
+import { normalizeName, isFranchise, isHomeDaycare, isSchoolProgram } from './heuristics.js';
 
 const DEDUPE_RADIUS_M = 150;
 
@@ -121,6 +121,7 @@ export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000) 
       position_along_route_m: Math.round(positionMeters),
       is_franchise: isFranchise(f.name) ? 1 : 0,
       is_home_daycare: isHomeDaycare(f.name, f.tags) ? 1 : 0,
+      is_school_program: isSchoolProgram(f.name, f.tags, f.primaryType) ? 1 : 0,
     });
   }
   placed.sort(byDriveOrder);

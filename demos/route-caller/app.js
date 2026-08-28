@@ -47,6 +47,7 @@
     toggleSort: $('toggle-sort'),
     toggleFranchise: $('toggle-franchise'),
     toggleHome: $('toggle-home'),
+    toggleSchool: $('toggle-school'),
     toggleMap: $('toggle-map'),
     mapPanel: $('map-panel'),
     cards: $('cards'),
@@ -61,6 +62,7 @@
       sort: 'drive',
       hideFranchises: true,
       hideHomeDaycares: true,
+      hideSchoolPrograms: true,
       search: '',
       status: 'all',
       mapOpen: false,
@@ -255,11 +257,22 @@
     return (name || 'Route').trim().split(/\s+/)[0].slice(0, 8).toUpperCase();
   }
 
-  function visibleFacilities() {
-    const term = prefs.search.trim().toLowerCase();
-    let list = state.facilities.filter((f) => {
+  /* The caller's list: everything on the route minus the categories she has
+     chosen to hide. Search and the status filter are a transient lens on top of
+     this, so they deliberately do NOT narrow it — the header counters answer
+     "how much of my list is left", not "how many rows match this search". */
+  function listScope() {
+    return state.facilities.filter((f) => {
       if (prefs.hideFranchises && f.is_franchise) return false;
       if (prefs.hideHomeDaycares && f.is_home_daycare) return false;
+      if (prefs.hideSchoolPrograms && f.is_school_program) return false;
+      return true;
+    });
+  }
+
+  function visibleFacilities() {
+    const term = prefs.search.trim().toLowerCase();
+    let list = listScope().filter((f) => {
       if (prefs.status === 'not_called' && f.status !== 'not_called') return false;
       if (prefs.status === 'called' && f.status === 'not_called') return false;
       if (prefs.status === 'flagged' && !f.flagged) return false;
@@ -299,20 +312,23 @@
     const hidden = [];
     if (prefs.hideFranchises) hidden.push('franchises');
     if (prefs.hideHomeDaycares) hidden.push('home daycares');
+    if (prefs.hideSchoolPrograms) hidden.push('schools');
     el.subtitle.textContent =
       `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}` +
       (hidden.length ? ` · ${hidden.join(' and ')} hidden` : ' · showing everything');
 
-    const called = state.facilities.filter((f) => f.status !== 'not_called').length;
-    const flagged = state.facilities.filter((f) => f.flagged).length;
+    const scope = listScope();
+    const called = scope.filter((f) => f.status !== 'not_called').length;
+    const flagged = scope.filter((f) => f.flagged).length;
     el.counters.innerHTML =
-      `<b>${called}</b> called · <b>${state.facilities.length - called}</b> left · <b>${flagged}</b> flagged`;
+      `<b>${called}</b> called · <b>${scope.length - called}</b> left · <b>${flagged}</b> flagged`;
 
     el.search.value = prefs.search;
     el.filterStatus.value = prefs.status;
     el.toggleSort.textContent = prefs.sort === 'capacity' ? 'Biggest first' : 'Drive order';
     el.toggleFranchise.setAttribute('aria-pressed', String(prefs.hideFranchises));
     el.toggleHome.setAttribute('aria-pressed', String(prefs.hideHomeDaycares));
+    el.toggleSchool.setAttribute('aria-pressed', String(prefs.hideSchoolPrograms));
 
     el.cards.innerHTML = '';
     list.forEach((f) => el.cards.append(facilityCard(f)));
@@ -322,6 +338,10 @@
       el.empty.textContent = state.facilities.length
         ? 'Nothing matches these filters. Tap Clear to see the whole list.'
         : 'No facilities were found within 10 miles of this route.';
+      if (state.facilities.length && !scope.length) {
+        el.empty.textContent =
+          'Everything on this route is hidden by the category filters. Tap Clear to see it all.';
+      }
     }
     if (prefs.mapOpen) drawMap(list);
   }
@@ -585,6 +605,12 @@
     render();
   });
 
+  el.toggleSchool.addEventListener('click', () => {
+    prefs.hideSchoolPrograms = !prefs.hideSchoolPrograms;
+    savePrefs();
+    render();
+  });
+
   el.toggleMap.addEventListener('click', () => {
     prefs.mapOpen = !prefs.mapOpen;
     savePrefs();
@@ -598,6 +624,7 @@
     prefs.status = 'all';
     prefs.hideFranchises = false;
     prefs.hideHomeDaycares = false;
+    prefs.hideSchoolPrograms = false;
     savePrefs();
     render();
   });

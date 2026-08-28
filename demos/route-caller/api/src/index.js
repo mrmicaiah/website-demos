@@ -138,12 +138,14 @@ async function createRoute(request, env) {
       env.DB.prepare(
         `INSERT INTO facilities
            (id, route_id, name, address, city, zip, phone, lat, lng, source, primary_type,
-            distance_from_route_m, position_along_route_m, is_franchise, is_home_daycare)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            distance_from_route_m, position_along_route_m,
+            is_franchise, is_home_daycare, is_school_program)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.lat, f.lng, f.source,
         f.primaryType || null,
-        f.distance_from_route_m, f.position_along_route_m, f.is_franchise, f.is_home_daycare
+        f.distance_from_route_m, f.position_along_route_m,
+        f.is_franchise, f.is_home_daycare, f.is_school_program
       )
     );
   }

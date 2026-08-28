@@ -5,6 +5,67 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — Hide schools & Head Starts (first user-driven feature)
+
+The caller's first feature request, and the first change driven by someone
+actually using the thing: she wants public schools, elementary schools and Head
+Start programs off her list. She does not sell to them.
+
+**Built as a visibility flag, not a deletion.** Migration 0003 adds
+`is_school_program`; it is set at ingest and hidden by default behind a "Hide
+schools & Head Starts" toggle beside the existing franchise and home-daycare
+toggles. The rows stay in D1 and she can flip the toggle off at any time.
+
+Why a toggle rather than filtering at ingest: "she does not sell to schools" is a
+preference, not a fact about the data, and preferences change — a district that
+won't buy this year may buy next year. Deleting at ingest would encode today's
+preference into the permanent record and make the decision unrecoverable without
+a re-ingest. The franchise flag already established this pattern and it was right
+to follow it.
+
+**Why this rule may match on names, when the retail deny-list may not.** These
+are different kinds of rule and the distinction is written into a comment in
+`heuristics.js` so a future session doesn't collapse them. The retail deny-list
+*deletes* rows at ingest, so it may only act on authoritative type data: a wrong
+call there loses a real facility silently and permanently. The school flag only
+*hides* a row behind a reversible toggle, so a wrong call costs one checkbox.
+The cost of being wrong sets how much evidence the rule needs. Name evidence is
+still treated as the weaker input: a name carrying a child-care word ("Little
+Scholars Elementary Prep Daycare", "Grace Church Preschool") stays visible unless
+Google's `primaryType` actually says school.
+
+**Checked for call activity before touching data.** The seed route had none, so
+it was re-ingested rather than patched with an `UPDATE`. Mid-task it turned out
+two more routes had appeared on the live API from outside this session, one of
+them with a call already logged — so the activity check was re-run rather than
+trusted from ten minutes earlier, and that route was left alone. Live state gets
+re-read before destructive work, not remembered.
+
+**Posh Mommy & Baby Too! is resolved, and the answer vindicates the earlier
+refusal.** The re-ingest captured `primary_type` on every Google row:
+**`child_care_agency`**. It is a real child care listing. Deleting it on the
+strength of its name — which was proposed, and declined on the grounds that names
+are not evidence — would have quietly removed a genuine facility from the
+caller's list. Two of the three name-suspicious rows turned out to be retail and
+one did not, which is exactly the error rate that makes name-based deletion a bad
+trade.
+
+**One finding to put back to her.** Three of the eight flagged rows are *private*
+schools caught by `primaryType: school` rather than by name: Montessori School of
+Huntsville, Grace Lutheran School, Valley Fellowship Christian Academy. She asked
+for public schools; a Montessori school is plausibly a customer. The rule was
+implemented as specified rather than quietly narrowed, and the finding is recorded
+in `STATE.md` for her to settle. Reversible either way.
+
+**Also fixed while here:** the header counters were computing over every row on
+the route, so "N left" included facilities hidden by the category toggles. With a
+third toggle hiding eight more rows, that gap would have become actively
+misleading. Counters now run over the caller's list — the route minus the hidden
+categories — while search and the status filter stay a transient lens that does
+not move the numbers.
+
+---
+
 ## 2026-08-28 — Route Caller phase 1: spec to live deploy
 
 Built route-caller from a written spec to a deployed, live-tested tool in one

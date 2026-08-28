@@ -16,7 +16,12 @@ import {
   isRetailNonChildcare,
   summarizeExcluded,
 } from '../src/pipeline.js';
-import { isFranchise, isHomeDaycare, normalizeName } from '../src/heuristics.js';
+import {
+  isFranchise,
+  isHomeDaycare,
+  normalizeName,
+  isSchoolProgram,
+} from '../src/heuristics.js';
 
 let passed = 0;
 const failures = [];
@@ -363,6 +368,92 @@ check('in-home providers are flagged', () => {
 check('name normalization strips punctuation and corporate suffixes', () => {
   assert(normalizeName('The Little Acorns, LLC.') === 'little acorns');
   assert(normalizeName('A & B Childcare') === 'a and b childcare');
+});
+
+console.log('school / Head Start flag');
+check('authoritative school types are flagged', () => {
+  assert(isSchoolProgram('Whitesburg Elementary School', {}, 'primary_school'));
+  assert(isSchoolProgram('Academy For Academics & Arts Middle', {}, 'school'));
+  assert(isSchoolProgram('Grace Lutheran School', {}, 'secondary_school'));
+});
+check('child care types are never flagged by type', () => {
+  assert(!isSchoolProgram('West Madison Pre-K School', {}, 'preschool'));
+  assert(!isSchoolProgram('Little Acorns', {}, 'child_care_agency'));
+});
+check('OSM amenity=school is flagged', () => {
+  assert(isSchoolProgram('Ridgecrest', { amenity: 'school' }));
+  assert(!isSchoolProgram('Ardent Preschool', { amenity: 'kindergarten' }));
+  assert(!isSchoolProgram('Learning Zone', { amenity: 'childcare' }));
+});
+check('Head Start is flagged by name, case-insensitively', () => {
+  assert(isSchoolProgram('Decatur City Head Start'));
+  assert(isSchoolProgram('HEAD START of North Alabama'));
+  assert(isSchoolProgram('head start program'));
+  assert(isSchoolProgram('Madison County Head-Start'));
+});
+check('public school name patterns are flagged', () => {
+  const flagged = [
+    'Lincoln Elementary School',
+    'Martin Luther King Junior Elementary School',
+    'Whitesburg Elementary',
+    'Bob Jones High School',
+    'Liberty Middle School',
+    'Huntsville City Schools',
+    'Madison County Schools',
+    'Decatur Board of Education',
+    'PS 118 Public School',
+  ];
+  for (const name of flagged) {
+    assert(isSchoolProgram(name), `${name} should be flagged`);
+  }
+});
+check('a school word alongside a child care word is NOT flagged on name alone', () => {
+  const keepVisible = [
+    'ABC Learning Academy',
+    'Little Scholars Elementary Prep Daycare',
+    'St Paul\u2019s Lutheran Church & Preschool',
+    'Central Park Baptist Childcare Center',
+    'Elementary Steps Child Care',
+    'Head Start Learning Center',
+    'Bright Beginnings Elementary Academy',
+  ];
+  for (const name of keepVisible) {
+    assert(!isSchoolProgram(name), `${name} should stay visible`);
+  }
+});
+check('but an authoritative school type overrides the child care word in the name', () => {
+  assert(
+    isSchoolProgram('Little Scholars Elementary Prep Daycare', {}, 'primary_school'),
+    'primaryType wins over the name guard'
+  );
+});
+check('ordinary child care names are untouched', () => {
+  const untouched = [
+    'Sunny Days Learning Center',
+    'KinderCare Learning Center',
+    'Montessori School Of Madison',
+    'KLA Schools of Huntsville',
+    'Growing in Grace Childcare',
+    'Boys & Girls Clubs of North Alabama',
+  ];
+  for (const name of untouched) {
+    assert(!isSchoolProgram(name), `${name} should stay visible`);
+  }
+});
+check('placeOnRoute sets is_school_program alongside the other flags', () => {
+  const placed = placeOnRoute(
+    [
+      { name: 'Whitesburg Elementary School', lat: 39.2, lng: -77.0, source: 'google', primaryType: 'primary_school', tags: {} },
+      { name: 'Sunny Days Learning Center', lat: 39.3, lng: -77.0, source: 'google', primaryType: 'child_care_agency', tags: {} },
+    ],
+    index,
+    16000
+  );
+  const school = placed.find((f) => f.name.includes('Whitesburg'));
+  const daycare = placed.find((f) => f.name.includes('Sunny'));
+  assert(school.is_school_program === 1, 'school flagged');
+  assert(daycare.is_school_program === 0, 'daycare not flagged');
+  assert(school.is_franchise === 0 && school.is_home_daycare === 0, 'flags are independent');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
