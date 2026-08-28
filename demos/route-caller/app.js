@@ -43,6 +43,8 @@
     subtitle: $('route-subtitle'),
     search: $('search'),
     filterStatus: $('filter-status'),
+    filterDistance: $('filter-distance'),
+    distanceNote: $('distance-note'),
     counters: $('counters'),
     toggleSort: $('toggle-sort'),
     toggleFranchise: $('toggle-franchise'),
@@ -65,6 +67,7 @@
       hideHomeDaycares: true,
       hideSchoolPrograms: true,
       hidePlaygroundUnlikely: true,
+      maxDistanceM: 48280, // 30 mi — ingest wide, filter narrow
       search: '',
       status: 'all',
       mapOpen: false,
@@ -264,7 +267,9 @@
      this, so they deliberately do NOT narrow it — the header counters answer
      "how much of my list is left", not "how many rows match this search". */
   function listScope() {
+    const maxDistance = effectiveMaxDistance();
     return state.facilities.filter((f) => {
+      if (f.distance_from_route_m != null && f.distance_from_route_m > maxDistance) return false;
       if (prefs.hideFranchises && f.is_franchise) return false;
       if (prefs.hideHomeDaycares && f.is_home_daycare) return false;
       if (prefs.hideSchoolPrograms && f.is_school_program) return false;
@@ -311,6 +316,36 @@
      Places under the lean mask): every row is null, so "no website" would be a
      property of the ingest, not of the facility. Don't show a prospecting signal
      we can't actually stand behind. */
+  /* The route's stored corridor is the ceiling on the distance lens: a route
+     ingested at 10 miles has no data past 10, so offering 20 or 30 there would
+     be three options showing identical rows. Older routes without the column
+     recorded default to the old 10-mile corridor. */
+  function routeCorridorM() {
+    return Number(state.route?.corridor_m) || 16000;
+  }
+
+  function effectiveMaxDistance() {
+    return Math.min(prefs.maxDistanceM, routeCorridorM());
+  }
+
+  function syncDistanceControl() {
+    const ceiling = routeCorridorM();
+    let capped = false;
+    for (const option of el.filterDistance.options) {
+      const value = Number(option.value);
+      option.disabled = value > ceiling;
+      if (option.disabled) capped = true;
+    }
+    el.filterDistance.value = String(effectiveMaxDistance());
+    el.distanceNote.hidden = !capped;
+    if (capped) {
+      el.distanceNote.textContent =
+        `This route's data only covers ${milesLabel(ceiling)} from the route, so wider options are unavailable until it is re-ingested.`;
+    }
+  }
+
+  const milesLabel = (metres) => `${Math.round(metres / 1609.34)} mi`;
+
   function routeHasWebsiteData() {
     return state.facilities.some((f) => f.website);
   }
@@ -319,6 +354,7 @@
     if (!state.route) return;
     const list = visibleFacilities();
     const websiteDataAvailable = routeHasWebsiteData();
+    syncDistanceControl();
 
     el.badge.textContent = routeBadge(state.route.name);
     el.title.textContent = `${state.route.name} — Call List`;
@@ -328,9 +364,16 @@
     if (prefs.hideHomeDaycares) hidden.push('home daycares');
     if (prefs.hideSchoolPrograms) hidden.push('schools');
     if (prefs.hidePlaygroundUnlikely) hidden.push('no-playground types');
+    const lens = effectiveMaxDistance();
+    const within = lens < routeCorridorM() ? `Within ${milesLabel(lens)}` : null;
     el.subtitle.textContent =
-      `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}` +
-      (hidden.length ? ` · ${hidden.join(' and ')} hidden` : ' · showing everything');
+      [
+        within,
+        `Sorted by ${prefs.sort === 'capacity' ? 'capacity' : 'drive order'}`,
+        hidden.length ? `${hidden.join(' and ')} hidden` : 'showing everything',
+      ]
+        .filter(Boolean)
+        .join(' · ');
 
     const scope = listScope();
     const called = scope.filter((f) => f.status !== 'not_called').length;
@@ -612,6 +655,12 @@
     }, 180)
   );
 
+  el.filterDistance.addEventListener('change', () => {
+    prefs.maxDistanceM = Number(el.filterDistance.value) || 48280;
+    savePrefs();
+    render();
+  });
+
   el.filterStatus.addEventListener('change', () => {
     prefs.status = el.filterStatus.value;
     savePrefs();
@@ -663,6 +712,7 @@
     prefs.hideHomeDaycares = false;
     prefs.hideSchoolPrograms = false;
     prefs.hidePlaygroundUnlikely = false;
+    prefs.maxDistanceM = 48280;
     savePrefs();
     render();
   });

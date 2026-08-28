@@ -104,6 +104,24 @@ them only with a reason better than the one recorded here.
   open/closed) plus a replay queue for `PATCH`es that failed while offline.
   Never call data.
 
+**Ingest wide, filter narrow**
+
+- **The full 30-mile corridor is ingested and stored; the UI narrows it.** Her
+  call: widening the view must never require re-searching a route. Every
+  facility stores its true `distance_from_route_m`, and the header's distance
+  lens (30 mi default / 20 / 10) filters on that client-side, instantly.
+- **A wide corridor is not a wide search radius.** One Places nearby search
+  returns at most 20 results, so a 30-mile radius in a dense area returns the
+  nearest 20 and never reaches the edge — measured, it collapsed a route's whole
+  result set inside 4.2 miles, worse than the 10-mile corridor it replaced. The
+  corridor is therefore **tiled**: each along-route sample gets search points
+  offset perpendicular at ±1 and ±2 lateral steps, each searched at a 16.1 km
+  radius, so the circles overlap and the outer ring reaches 30 miles. If you
+  ever widen the corridor again, widen the tiling, not the radius.
+- **`routes.corridor_m` records what a route was actually ingested at**, and the
+  UI disables lens options beyond it. A route ingested at 10 miles must say so
+  rather than offer three options that show identical rows.
+
 **Who gets hidden, and why it is always a toggle**
 
 - **Hiding is never deleting.** Franchises, home daycares, public schools and

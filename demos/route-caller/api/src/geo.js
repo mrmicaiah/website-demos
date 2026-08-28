@@ -187,3 +187,67 @@ export function samplePointsAlong(index, intervalMeters = 8000, maxPoints = 25) 
   }
   return out;
 }
+
+/** Initial bearing in degrees from a to b. */
+export function bearingBetween(a, b) {
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+/** The point `distanceMeters` from `p` along `bearingDeg`. */
+export function destinationPoint(p, bearingDeg, distanceMeters) {
+  const angular = distanceMeters / EARTH_RADIUS_M;
+  const bearing = toRad(bearingDeg);
+  const lat1 = toRad(p.lat);
+  const lng1 = toRad(p.lng);
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing)
+  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1),
+      Math.cos(angular) - Math.sin(lat1) * Math.sin(lat2)
+    );
+  return {
+    lat: (lat2 * 180) / Math.PI,
+    lng: (((lng2 * 180) / Math.PI + 540) % 360) - 180,
+  };
+}
+
+/**
+ * Search points that TILE the corridor, rather than one giant circle per sample.
+ *
+ * A single Places nearby search returns at most 20 results, so widening its
+ * radius to 30 miles does not widen coverage — in a dense area it returns the
+ * nearest 20 and never reaches the edge. Measured on the Decatur route at a
+ * 48 km radius: all 7 searches saturated and the entire result set collapsed
+ * inside 4.2 miles, worse than the 10-mile corridor it replaced.
+ *
+ * So the corridor is covered by a grid instead. Each along-route sample gets
+ * search points offset perpendicular to the route at ±1 and ±2 lateral steps.
+ * With a 16 km step and a 16 km search radius the circles overlap, and the
+ * outermost ring reaches 48 km — 30 miles — from the route.
+ */
+export function corridorSearchPoints(index, samples, lateralStepMeters, rings) {
+  const points = [];
+  for (const sample of samples) {
+    const { segmentIndex } = nearestOnRoute(index, sample);
+    const a = index.points[segmentIndex];
+    const b = index.points[Math.min(segmentIndex + 1, index.points.length - 1)];
+    const heading = bearingBetween(a, b);
+    for (let ring = -rings; ring <= rings; ring++) {
+      if (ring === 0) {
+        points.push(sample);
+        continue;
+      }
+      const bearing = heading + (ring > 0 ? 90 : -90);
+      points.push(destinationPoint(sample, bearing, Math.abs(ring) * lateralStepMeters));
+    }
+  }
+  return points;
+}

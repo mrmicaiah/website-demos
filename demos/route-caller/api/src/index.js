@@ -5,7 +5,13 @@
 // GET    /api/routes/:id     one route + its facilities in drive order
 // PATCH  /api/facilities/:id update status / flagged / notes
 
-import { decodePolyline, simplifyByDistance, buildRouteIndex, samplePointsAlong } from './geo.js';
+import {
+  decodePolyline,
+  simplifyByDistance,
+  buildRouteIndex,
+  samplePointsAlong,
+  corridorSearchPoints,
+} from './geo.js';
 import { ApiError, geocode, computeRoute, searchNearby, searchAlongRoute } from './google.js';
 import { fetchOverpass, endpointList } from './overpass.js';
 import {
@@ -15,9 +21,28 @@ import {
   summarizeExcluded,
 } from './pipeline.js';
 
-const CORRIDOR_M = 16000; // 10 miles
+// Ingest wide, filter narrow. Her decision: store the full 30-mile corridor so
+// widening the view is a UI toggle rather than a re-search. Every facility keeps
+// its true distance; the frontend's distance lens does the narrowing.
+// 48,280 m is 30 miles and sits just inside the Places nearby radius cap of
+// 50,000 m — there is no room to widen further without a different search shape.
+const CORRIDOR_M = 48280; // 30 miles — what we store and filter on
+// One nearby search returns at most 20 results, so the corridor is TILED with
+// overlapping 16 km searches rather than covered by one 48 km circle. See
+// corridorSearchPoints in geo.js for the measurement that forced this.
+// Radius doubles as the lateral step, so (2 rings + 1) * radius must cover the
+// corridor: 3 x 16,100 = 48,300 m, just past the 48,280 m we store.
+const SEARCH_RADIUS_M = 16100;
+const LATERAL_RINGS = 2; // 0, ±16.1 km, ±32.2 km -> outer edge reaches 48.3 km
+const SEARCH_POINTS_PER_SAMPLE = LATERAL_RINGS * 2 + 1;
+// Overpass stays narrow on purpose: at a 48 km radius its chunks take ~8 s each
+// and the pipeline runs into the edge timeout. OSM facilities and playground
+// signals therefore cover the inner 10 miles; Google covers the full 30.
+const OSM_CORRIDOR_M = 16000;
 const SAMPLE_INTERVAL_M = 8000;
-const MAX_SAMPLES = 25; // keeps us inside the Worker subrequest budget
+const MAX_SEARCH_POINTS = 90;
+const MAX_SAMPLES = Math.floor(MAX_SEARCH_POINTS / SEARCH_POINTS_PER_SAMPLE); // 18
+const SEARCH_CONCURRENCY = 12; // wall time, not subrequests, is the binding limit
 const STATUSES = ['not_called', 'no_answer', 'voicemail', 'interested', 'not_interested'];
 
 const CORS = {
@@ -63,6 +88,7 @@ export default {
 };
 
 async function createRoute(request, env) {
+  const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
   const name = (body.name || '').trim();
   const startAddress = (body.start_address || '').trim();
@@ -88,10 +114,38 @@ async function createRoute(request, env) {
   const routeIndex = buildRouteIndex(simplifyByDistance(points, 200));
   const samples = samplePointsAlong(routeIndex, SAMPLE_INTERVAL_M, MAX_SAMPLES);
 
+  // Each nearby search is capped at 20 results by Google. With a 30-mile radius
+  // that cap bites in dense areas, so the searches rank by DISTANCE and we count
+  // how often they saturate — a saturated search means facilities beyond its
+  // farthest returned result were not seen by that sample point.
+  const searchPoints = corridorSearchPoints(
+    routeIndex,
+    samples,
+    SEARCH_RADIUS_M,
+    LATERAL_RINGS
+  );
+
+  // Searches run in bounded parallel: on a paid Workers plan the subrequest
+  // ceiling is 1000, so wall time is what constrains us, not call count.
+  const placesStartedAt = Date.now();
   const googleLists = [];
-  for (const point of samples) {
-    googleLists.push(await searchNearby(point, key, CORRIDOR_M));
+  let saturatedSearches = 0;
+  for (let i = 0; i < searchPoints.length; i += SEARCH_CONCURRENCY) {
+    const batch = searchPoints.slice(i, i + SEARCH_CONCURRENCY);
+    const found = await Promise.all(
+      batch.map((point) => searchNearby(point, key, SEARCH_RADIUS_M).catch(() => []))
+    );
+    for (const list of found) {
+      if (list.length >= 20) saturatedSearches++;
+      googleLists.push(list);
+    }
   }
+  const placesMs = Date.now() - placesStartedAt;
+  console.log(
+    `route "${name}": ${searchPoints.length} Places searches in ${placesMs} ms, ` +
+      `(${samples.length} along x ${SEARCH_POINTS_PER_SAMPLE} lateral), ` +
+      `${saturatedSearches} saturated at radius ${SEARCH_RADIUS_M} m`
+  );
   try {
     googleLists.push(await searchAlongRoute(encodedPolyline, key));
   } catch {
@@ -104,8 +158,9 @@ async function createRoute(request, env) {
   let osmEndpoints = [];
   let osmRequests = 0;
   let osmErrors = {};
+  const osmStartedAt = Date.now();
   try {
-    const overpass = await fetchOverpass(samples, CORRIDOR_M, {
+    const overpass = await fetchOverpass(samples, OSM_CORRIDOR_M, {
       endpoints: endpointList(env.OVERPASS_URL),
     });
     osmResults = overpass.facilities;
@@ -141,6 +196,8 @@ async function createRoute(request, env) {
     );
   }
 
+  const osmMs = Date.now() - osmStartedAt;
+
   const facilities = placeOnRoute(
     mergeCandidates([kept, osmResults]),
     routeIndex,
@@ -151,9 +208,12 @@ async function createRoute(request, env) {
   const routeId = crypto.randomUUID();
   const statements = [
     env.DB.prepare(
-      `INSERT INTO routes (id, name, start_address, end_address, polyline, osm_status)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(routeId, name, start.formatted || startAddress, end.formatted || endAddress, encodedPolyline, osmStatus),
+      `INSERT INTO routes (id, name, start_address, end_address, polyline, osm_status, corridor_m)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      routeId, name, start.formatted || startAddress, end.formatted || endAddress,
+      encodedPolyline, osmStatus, CORRIDOR_M
+    ),
   ];
 
   const rows = facilities.map((f) => ({ ...f, id: crypto.randomUUID(), route_id: routeId }));
@@ -194,6 +254,13 @@ async function createRoute(request, env) {
         osm_endpoints: osmEndpoints,
         osm_requests: osmRequests,
         osm_errors: osmErrors,
+        corridor_m: CORRIDOR_M,
+        places_searches: searchPoints.length,
+        places_saturated: saturatedSearches,
+        places_ms: placesMs,
+        osm_ms: osmMs,
+        osm_corridor_m: OSM_CORRIDOR_M,
+        elapsed_ms: Date.now() - startedAt,
       },
     },
     201

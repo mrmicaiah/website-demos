@@ -5,6 +5,79 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — 30-mile corridor: the measurement that changed the design
+
+She wants the full 30 miles ingested with the UI filtering it down. The brief
+assumed that was a constant change — raise the corridor from 16,000 m to
+48,280 m and check it fits under the Places 50,000 m radius cap. It does fit,
+and it does not work.
+
+### What the measurement showed
+
+Raising the radius made coverage **strictly worse**. On Decatur:
+
+| | facilities | spread | saturated |
+| --- | --- | --- | --- |
+| 10-mile corridor (before) | 72 | 9.3 mi | — |
+| 48 km radius | 85 | **4.2 mi** | **7 of 7** |
+| tiled 16.1 km searches | **227** | **29.3 mi** | 23 of 35 |
+
+Every search hit the 20-result cap and returned only its nearest 20, so a
+30-mile circle in a dense area never reached past 4 miles. `rankPreference:
+DISTANCE` did its job — it protects the near facilities — but it cannot conjure
+far ones that a saturated search never returned. Shipping that would have handed
+her a shorter list and called it wider.
+
+The brief said prefer measuring over theorising, which is the only reason this
+was caught before it reached her.
+
+### Tiling
+
+A wide corridor is not a wide radius. Each along-route sample now gets search
+points offset perpendicular at ±1 and ±2 lateral steps of 16.1 km, each searched
+at 16.1 km. Three overlapping radii reach 48.3 km, just past what we store. 18
+along-route samples x 5 lateral = 90 searches. Decatur went 72 to 227 facilities,
+163 of them inside 10 miles where there had been 72 — the tiling improved the
+*near* coverage as much as the far.
+
+### Two documented constraints turned out to be wrong
+
+**The 50-subrequest ceiling is the free-tier number; this account is paid.** A
+logged 123 ms of CPU proves it — the free tier kills at 10 ms. The real ceiling
+is 1000, and several past decisions were shaped by a limit that was never
+binding. Current usage is 114.
+
+**The ~100 s edge cliff is higher than assumed.** A 285 s request completed. But
+that is not a licence to be slow: the binding limit is the caller, not the edge.
+
+### Wall time, and the bound that actually worked
+
+Instrumenting the phases separately was the whole game. Places: **0.5 s** for 35
+searches, **3.2 s** for 90 — parallelised 12 at a time, it was never the problem.
+Overpass was **96.9 s of a 100 s request**, and failing.
+
+A phase-level time budget alone did not fix it: the deadline is only checked
+between requests, so one hanging fetch blew through it — 60.9 s against a 20 s
+budget. **`AbortSignal.timeout` per request** is what actually bounded it.
+Decatur: 285 s to 103 s to 62 s to **21.9 s**, each step a different bound.
+
+### Honest edges
+
+Saturation is not solved, only improved: 23 of 35 searches on Decatur and 30 of
+90 on gatlingburg still hit the cap, so dense edges are under-sampled. There is
+subrequest headroom to tile tighter; the cost is Places billing at the
+Enterprise SKU, which is a business call and not mine.
+
+Overpass is largely down for us again — mirrors 500, primary 500 or timing out —
+so playground data is thin. It runs at a narrower 10-mile radius than Google on
+purpose, so those signals cover the inner 10 miles only.
+
+Connecticut stays at 10 miles and its wider lens options are disabled with a note
+saying why. Three options showing identical rows would be a lie told by a
+dropdown.
+
+---
+
 ## 2026-08-28 — Overpass mirrors: the fix that didn't, and the one that did
 
 Implemented the mirror-endpoint fallback scoped last session. **The mirrors do

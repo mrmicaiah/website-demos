@@ -62,6 +62,11 @@
 
       <div class="head-controls">
         <input id="search" type="search" placeholder="Search name, town, ZIP" autocomplete="off" />
+        <select id="filter-distance" aria-label="Distance from route">
+          <option value="48280">30 mi</option>
+          <option value="32180">20 mi</option>
+          <option value="16000">10 mi</option>
+        </select>
         <select id="filter-status" aria-label="Filter by status">
           <option value="all">All</option>
           <option value="not_called">Not called</option>
@@ -71,6 +76,8 @@
           <option value="interested">Interested</option>
         </select>
       </div>
+
+      <p id="distance-note" class="head-note" hidden></p>
 
       <div id="counters" class="counters"></div>
 

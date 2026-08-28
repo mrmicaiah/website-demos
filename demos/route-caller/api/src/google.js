@@ -131,6 +131,12 @@ export async function searchNearby(point, key, radius = 16000) {
   const body = {
     includedTypes: NEARBY_TYPES,
     maxResultCount: 20,
+    // Google caps this at 20 results. At a 30-mile radius that cap saturates in
+    // dense areas, so rank by distance: saturation then sheds the FARTHEST
+    // facilities, never the nearest. Dropping close facilities in favour of
+    // arbitrary far ones would be the worst possible failure for a caller
+    // working in drive order.
+    rankPreference: 'DISTANCE',
     locationRestriction: {
       circle: {
         center: { latitude: point.lat, longitude: point.lng },

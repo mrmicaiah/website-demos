@@ -185,6 +185,14 @@ body {
 }
 .head-controls input { flex: 1; }
 .head-controls select { flex: 0 0 auto; max-width: 42%; }
+.head-controls select:disabled { opacity: 0.55; }
+
+.head-note {
+  margin: 8px 0 0;
+  color: #CFE3D6;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
 
 .counters { margin-top: 12px; color: #CFE3D6; font-size: 0.86rem; }
 .counters b { color: #fff; font-weight: 800; }

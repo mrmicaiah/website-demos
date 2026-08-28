@@ -58,6 +58,24 @@ export function endpointList(primary = DEFAULT_ENDPOINT) {
  */
 export const MAX_OVERPASS_REQUESTS = 20;
 
+/**
+ * Wall-clock ceiling on the whole Overpass phase.
+ *
+ * Measured on the Decatur route: the Places half of the pipeline takes 1.3 s for
+ * 35 parallel searches, while Overpass burned 96.9 s of a 100 s request — and
+ * still failed. OSM data is a bonus (extra facilities, the playground signal);
+ * it is not worth making the caller wait minutes for, so the phase gives up and
+ * degrades to Google-only once this is spent.
+ */
+export const MAX_OVERPASS_MS = 20000;
+
+/**
+ * Per-request timeout. The phase deadline alone is not enough: it is only
+ * checked between requests, so a single hanging fetch blows straight through it.
+ * Measured, a healthy chunk answers in 2-8 s, so 9 s is generous.
+ */
+export const REQUEST_TIMEOUT_MS = 9000;
+
 // A broken path to this endpoint, so retrying it is pointless — move on. 500 is
 // in here from observation: both mirrors return it consistently for queries the
 // main endpoint serves, so for our purposes they are simply unusable.
@@ -136,7 +154,9 @@ export async function fetchOverpass(samplePoints, radiusMeters = 16000, options 
     chunkSize = CHUNK_SIZE,
     endpoints = endpointList(),
     maxRequests = MAX_OVERPASS_REQUESTS,
+    maxMs = MAX_OVERPASS_MS,
   } = options;
+  const deadline = Date.now() + maxMs;
 
   const chunks = chunkSamples(samplePoints, chunkSize);
   const state = {
@@ -145,6 +165,7 @@ export async function fetchOverpass(samplePoints, radiusMeters = 16000, options 
     requests: 0,
     maxRequests,
     served: new Set(),
+    deadline,
     lastError: null,
     // host -> what it last returned, so a total failure can still say why.
     errors: {},
@@ -154,6 +175,10 @@ export async function fetchOverpass(samplePoints, radiusMeters = 16000, options 
   for (let i = 0; i < chunks.length; i++) {
     if (state.requests >= state.maxRequests) {
       state.lastError = state.lastError || 'Overpass subrequest budget exhausted';
+      break;
+    }
+    if (Date.now() >= state.deadline) {
+      state.lastError = state.lastError || 'Overpass time budget exhausted';
       break;
     }
     if (i > 0) await sleep(POLITE_DELAY_MS);
@@ -193,7 +218,11 @@ async function fetchChunkWithFallback(chunk, radiusMeters, state) {
     // broken — overpass-api.de does exactly this, serving some chunks and 521ing
     // others. Retry it rather than falling through to mirrors that can't help.
     const proven = state.served.has(url);
-    if ((attempt.temporary || proven) && state.requests < state.maxRequests) {
+    if (
+      (attempt.temporary || proven) &&
+      state.requests < state.maxRequests &&
+      Date.now() + 3000 < state.deadline
+    ) {
       await sleep(3000);
       attempt = await tryChunk(url, chunk, radiusMeters, state);
       if (attempt.ok) {
@@ -207,13 +236,13 @@ async function fetchChunkWithFallback(chunk, radiusMeters, state) {
     if (attempt.handshake && i === state.index && !state.served.has(url)) {
       state.index = i + 1;
     }
-    if (state.requests >= state.maxRequests) break;
+    if (state.requests >= state.maxRequests || Date.now() >= state.deadline) break;
   }
   return null;
 }
 
 async function tryChunk(url, chunk, radiusMeters, state) {
-  if (state.requests >= state.maxRequests) {
+  if (state.requests >= state.maxRequests || Date.now() >= state.deadline) {
     return { ok: false, handshake: false, temporary: false };
   }
   state.requests++;
@@ -265,6 +294,7 @@ function post(url, query) {
       'User-Agent': USER_AGENT,
     },
     body: `data=${encodeURIComponent(query)}`,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 }
 

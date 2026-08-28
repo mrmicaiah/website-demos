@@ -7,6 +7,9 @@ import {
   buildRouteIndex,
   nearestOnRoute,
   samplePointsAlong,
+  bearingBetween,
+  destinationPoint,
+  corridorSearchPoints,
 } from '../src/geo.js';
 import {
   chunkSamples,
@@ -17,6 +20,7 @@ import {
   endpointList,
   DEFAULT_ENDPOINT,
   MAX_OVERPASS_REQUESTS,
+  MAX_OVERPASS_MS,
 } from '../src/overpass.js';
 import {
   mergeCandidates,
@@ -724,6 +728,125 @@ check('elements split into facilities and playgrounds, ways use their center', (
   assert(facilities[0].externalId === 'osm-node-1', 'stable external id');
   assert(playgrounds.length === 1 && playgrounds[0].id === 'osm-way-2', 'way playground kept via center');
   assert(playgrounds[0].lat === 39.21, 'center coords used');
+});
+
+console.log('30-mile corridor');
+check('the corridor filter keeps facilities out to 30 miles and drops beyond', () => {
+  const CORRIDOR = 48280;
+  const placed = placeOnRoute(
+    [
+      // ~8.5 km east of the meridian route
+      { name: 'Close', lat: 39.5, lng: -76.9, source: 'google', tags: {} },
+      // ~42 km east — inside 30 mi, would have been dropped at 10 mi
+      { name: 'Mid', lat: 39.5, lng: -76.51, source: 'google', tags: {} },
+      // ~90 km east — outside 30 mi
+      { name: 'Far', lat: 39.5, lng: -75.95, source: 'google', tags: {} },
+    ],
+    index,
+    CORRIDOR
+  );
+  const names = placed.map((f) => f.name);
+  assert(names.includes('Close'), 'near facility kept');
+  assert(names.includes('Mid'), 'facility past 10 mi is now kept');
+  assert(!names.includes('Far'), 'facility past 30 mi is still dropped');
+  const mid = placed.find((f) => f.name === 'Mid');
+  assert(mid.distance_from_route_m > 16000, 'true distance stored, not clamped');
+  assert(mid.distance_from_route_m < 48280, 'and inside the corridor');
+});
+check('30 miles stays inside the Places nearby radius cap', () => {
+  const CORRIDOR = 48280;
+  assert(CORRIDOR <= 50000, 'Places caps a nearby search radius at 50,000 m');
+  assert(Math.round(CORRIDOR / 1609.34) === 30, 'and it really is 30 miles');
+});
+check('the distance lens narrows on stored distance without losing rows', () => {
+  // What the frontend's listScope does: filter, never re-fetch.
+  const stored = [
+    { name: 'A', distance_from_route_m: 4000 },
+    { name: 'B', distance_from_route_m: 15000 },
+    { name: 'C', distance_from_route_m: 25000 },
+    { name: 'D', distance_from_route_m: 45000 },
+  ];
+  const within = (max) => stored.filter((f) => f.distance_from_route_m <= max);
+  assert(within(48280).length === 4, '30 mi shows everything stored');
+  assert(within(32180).length === 3, '20 mi drops the 45 km row');
+  assert(within(16000).length === 2, '10 mi keeps only the two nearest');
+  assert(stored.length === 4, 'filtering never mutates the stored set');
+});
+check('the lens is capped by the corridor the route was ingested at', () => {
+  // A route ingested at 10 mi cannot honour a 20 or 30 mi request.
+  const effective = (pref, corridor) => Math.min(pref, corridor || 16000);
+  assert(effective(48280, 48280) === 48280, 'wide route honours a wide lens');
+  assert(effective(48280, 16000) === 16000, 'narrow route caps the lens');
+  assert(effective(16000, 48280) === 16000, 'a narrow preference still wins');
+  assert(effective(48280, null) === 16000, 'a route with no recorded corridor is treated as 10 mi');
+  assert(effective(48280, undefined) === 16000, 'undefined too');
+});
+
+console.log('corridor tiling');
+check('bearing and destination round-trip', () => {
+  const a = { lat: 39.0, lng: -77.0 };
+  assert(Math.abs(bearingBetween(a, { lat: 40.0, lng: -77.0 }) - 0) < 0.5, 'due north');
+  assert(Math.abs(bearingBetween(a, { lat: 39.0, lng: -76.0 }) - 90) < 0.5, 'due east');
+  assert(Math.abs(bearingBetween(a, { lat: 38.0, lng: -77.0 }) - 180) < 0.5, 'due south');
+  const east = destinationPoint(a, 90, 16000);
+  near(haversineMeters(a, east), 16000, 5, 'destination distance');
+  assert(east.lng > a.lng && Math.abs(east.lat - a.lat) < 0.01, 'headed east');
+});
+check('each along-route sample yields one search point per lateral ring', () => {
+  const route = buildRouteIndex([{ lat: 39, lng: -77 }, { lat: 39.5, lng: -77 }]);
+  const sample = { lat: 39.25, lng: -77 };
+  const points = corridorSearchPoints(route, [sample], 16000, 2);
+  assert(points.length === 5, `expected 5 points, got ${points.length}`);
+  const offsets = points.map((p) => Math.round(haversineMeters(sample, p) / 1000));
+  assert(offsets.filter((d) => d === 0).length === 1, 'one on the route');
+  assert(offsets.filter((d) => d === 16).length === 2, 'two at one step');
+  assert(offsets.filter((d) => d === 32).length === 2, 'two at two steps');
+});
+check('the outer ring plus the search radius covers the whole stored corridor', () => {
+  // The radius doubles as the lateral step, so (2 rings + 1) * radius must be
+  // at least the corridor we store — otherwise there is an outer band we filter
+  // rows into but never actually search.
+  const RADIUS = 16100;
+  const CORRIDOR = 48280;
+  const route = buildRouteIndex([{ lat: 39, lng: -77 }, { lat: 39.5, lng: -77 }]);
+  const points = corridorSearchPoints(route, [{ lat: 39.25, lng: -77 }], RADIUS, 2);
+  const furthest = Math.max(
+    ...points.map((p) => haversineMeters({ lat: 39.25, lng: -77 }, p))
+  );
+  assert(
+    furthest + RADIUS >= CORRIDOR,
+    `outer reach ${Math.round(furthest + RADIUS)} m must cover ${CORRIDOR} m`
+  );
+  assert(3 * RADIUS >= CORRIDOR, 'the arithmetic that keeps it true if rings change');
+});
+check('the rings straddle the route rather than sitting on one side', () => {
+  const route = buildRouteIndex([{ lat: 39, lng: -77 }, { lat: 39.5, lng: -77 }]);
+  const points = corridorSearchPoints(route, [{ lat: 39.25, lng: -77 }], 16000, 2);
+  assert(points.some((p) => p.lng < -77.001), 'points west of the route');
+  assert(points.some((p) => p.lng > -76.999), 'points east of the route');
+});
+check('the search budget stays inside the paid-plan subrequest ceiling', () => {
+  // Paid Workers plan allows 1000 subrequests; the old 50 figure was the free
+  // tier. Wall time, not call count, is what actually constrains the pipeline.
+  const MAX_SEARCH_POINTS = 90;
+  const perSample = 5;
+  const maxSamples = Math.floor(MAX_SEARCH_POINTS / perSample);
+  assert(maxSamples === 18, `expected 18 along-route samples, got ${maxSamples}`);
+  const googleCalls = 2 + 1 + maxSamples * perSample + 1;
+  assert(googleCalls === 94, `expected 94 Google calls, got ${googleCalls}`);
+  assert(googleCalls + MAX_OVERPASS_REQUESTS < 1000, 'well inside the paid ceiling');
+  assert(googleCalls + MAX_OVERPASS_REQUESTS > 50, 'and deliberately past the free-tier one');
+});
+
+check('the Overpass phase is bounded in time, not just in calls', () => {
+  // Measured: Places takes ~1.3 s for 35 parallel searches; Overpass burned
+  // 96.9 s of a 100 s request and still failed. OSM is a bonus, not worth
+  // making the caller wait for.
+  assert(MAX_OVERPASS_MS > 0, 'there is a time budget at all');
+  assert(MAX_OVERPASS_MS <= 30000, `${MAX_OVERPASS_MS} ms is too long to make her wait`);
+  const placesMs = 1300;
+  const worstCase = placesMs + MAX_OVERPASS_MS + 5000; // + geocode, routing, D1
+  assert(worstCase < 60000, `worst-case pipeline ${worstCase} ms should stay under a minute`);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

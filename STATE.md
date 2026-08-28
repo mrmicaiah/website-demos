@@ -41,6 +41,9 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   (`websiteUri`, Enterprise SKU, full mask only) and from OSM
   `website`/`contact:website`. A missing website renders a low-weight badge and
   has its own filter entry: it is a prospecting signal she wants, not a gap.
+- **30-mile corridor, tiled** — the full 30 miles is ingested and stored, with a
+  distance lens (30 / 20 / 10 mi) narrowing it client-side. See the tiling and
+  saturation findings below; widening the radius alone made things worse.
 - **Overpass corridor chunking and endpoint fallback** — small chunks, retries,
   cross-chunk dedupe, `OVERPASS_URL` configurable with mirror fallback, and a
   counter-enforced subrequest cap. The mirrors turned out to be unusable, but
@@ -49,25 +52,24 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **69 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+- **79 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
 
-| route | id | rows | school | no-play | playground | no website | visible | calls |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Decatur to Huntsville Test | `db187c9d` | 72 | 4 | 0 | 10 | 19 | 57 | none |
-| here to gatlingburg | `9d25fac3` | 255 | 31 | 2 | **10** | 57 | 222 | none |
-| Connecticut to Rhode Island | `b18c249a` | 213 | 10 | 5 | 0 | — | 198 | **1 call** |
+| route | id | corridor | rows | ≤10mi | ≤20mi | school | no-play | playground | visible | calls |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 22 | 2 | 0 | 191 | none |
+| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 83 | 9 | 9 | 544 | none |
+| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 10 | 5 | 0 | 175 | **1 call** |
 
-- **Decatur to Huntsville Test** and **here to gatlingburg** were re-ingested
-  2026-08-28 and carry the full field set natively: `website`, playground
-  signals, `primary_type`, and the narrowed school flags. Decatur got
-  `osm_status: ok`; gatlingburg did **not** (see below).
-- **Connecticut to Rhode Island has live call activity** — one row, "Play To
-  Learn Childcare", `no_answer`. **Never re-ingest this route**; that would
-  destroy her work. Flag columns are safe to `UPDATE` in place, which is how its
-  school and no-play flags were backfilled.
+- Decatur and gatlingburg were re-ingested 2026-08-28 at the **30-mile corridor**
+  and carry `corridor_m = 48280`. Both roughly tripled in size.
+- **Connecticut is stuck at 10 miles** (`corridor_m = 16000`) because it has a
+  call on it and can never be re-ingested. The UI disables its 20- and 30-mile
+  lens options and says why, rather than offering three options that would show
+  identical rows.
+- **Never re-ingest Connecticut.** Flag columns are safe to `UPDATE` in place.
 
 #### The Connecticut enrichment gap
 
@@ -88,65 +90,86 @@ route's existing rows and `UPDATE`s only the enrichment columns (`website`,
 `notes`, or row identity. That is the general answer to "this route has call
 activity but stale enrichment", which will keep recurring as the schema grows.
 
-#### Overpass: mirrors don't work, the main endpoint is intermittent
+#### The 20-result cap, and why the corridor is tiled
 
-The corridor query is **chunked** (`CHUNK_SIZE = 4` sample points per query,
-sequential, 1 s apart, deduped across chunks by OSM element id) and the endpoint
-is configurable via **`OVERPASS_URL`** in `wrangler.toml` `[vars]`, with an
-ordered fallback through two mirrors.
+**A wide corridor is not a wide search radius.** Raising the Places nearby radius
+to 48 km made coverage strictly worse, measured on Decatur:
 
-**The mirror fix did not work.** Both mirrors return **HTTP 500** consistently,
-for the same queries the main endpoint serves:
+| | facilities | spread | saturated searches |
+| --- | --- | --- | --- |
+| 10-mile radius (before) | 72 | 9.3 mi | not measured |
+| 48 km radius (naive widening) | 85 | **4.2 mi** | **7 of 7** |
+| tiled, 16.1 km searches (now) | **227** | **29.3 mi** | 23 of 35 |
 
-```
-overpass-api.de          HTTP 521 (intermittent — serves some chunks)
-overpass.kumi.systems    HTTP 500 (never served a chunk)
-overpass.private.coffee  HTTP 500 (never served a chunk)
-```
+One nearby search returns at most 20 results. At a 48 km radius in a dense area
+it returns the nearest 20 and never reaches the edge, so the whole route
+collapsed inside 4.2 miles — the exact failure the change was meant to avoid.
+`rankPreference: DISTANCE` protects the near facilities but cannot conjure the
+far ones.
 
-What did improve is the main endpoint. It is **intermittent rather than
-blocked** from Worker egress: it serves one or two of seven chunks and 521s the
-rest. gatlingburg now gets real OSM data where it previously got none —
-255 facilities (up from 243), 15 OSM-derived rows, and **10 playgrounds mapped**
-(up from 0). `osm_status` reads `partial: N of 7 chunks`, which is the honest
-description.
+The fix is **tiling**: each along-route sample gets search points offset
+perpendicular at ±1 and ±2 lateral steps of 16.1 km, each searched at a 16.1 km
+radius. Three overlapping radii reach 48.3 km, just past the 48,280 m stored.
+18 along-route samples x 5 lateral = 90 searches per route.
 
-Two behaviours were tuned from observation and are worth not undoing:
+Saturation is still real — 23 of 35 searches on Decatur, 30 of 90 on
+gatlingburg, hit the 20-result cap — so dense areas are still under-sampled at
+the edges. Tighter lateral spacing would help and there is subrequest headroom
+for it (see below); the constraint is wall time and Places billing, not calls.
 
-- **An endpoint that has already served a chunk is never retired.** Retiring the
-  primary the first time it 521d was actively losing coverage — the mirrors it
-  fell through to can't serve anything.
-- **500 counts as a broken path**, so the mirrors are retired after one failure
-  each rather than burning two subrequests per chunk.
+#### Overpass: bounded, and mostly failing
 
-**Next option, deliberately not built: route Overpass calls through a
-non-Cloudflare proxy.** The evidence points at something in the Cloudflare
-Workers → Overpass path rather than at query size (small chunks fail too) or at
-the service (identical queries succeed from a laptop). A small proxy on
-non-Cloudflare infrastructure would test that directly and, if it works, fix
-every long route. Nobody has built it and it should not be built on spec.
+Mirrors do not work: `overpass.kumi.systems` and `overpass.private.coffee` return
+HTTP 500, and the main endpoint currently returns 500 or times out. gatlingburg
+managed `partial: 1 of 5 chunks`; Decatur got nothing.
 
-Connecticut still shows `unavailable: Overpass HTTP 521` from its original
-ingest and cannot be refreshed without a re-ingest, which is forbidden — see the
-enrichment gap above.
+Overpass runs at a **narrower 10-mile radius** than Google on purpose — at 30
+miles its chunks take ~8 s each and the phase dominates the request. So OSM
+facilities and the playground signal cover the inner 10 miles while Google
+covers the full 30.
 
-#### Subrequest budget
+Two bounds were added after measurement, and both matter:
 
-Workers cap subrequests per request (50 on the free plan). A 25-sample route
-spends **29 Google** calls (2 geocode + 1 routing + 25 Places nearby + 1 Places
-text) and **7 Overpass chunks** = 36 typical.
+- **`MAX_OVERPASS_MS = 20000`**, a wall-clock budget for the whole phase.
+- **`REQUEST_TIMEOUT_MS = 9000`** per request via `AbortSignal.timeout`. The
+  phase deadline alone was not enough — it is only checked between requests, so
+  one hanging fetch blew straight through it. This is the fix that mattered.
 
-Mirror failover makes the worst case awkward to reason about, so it is no longer
-reasoned about: **`MAX_OVERPASS_REQUESTS = 20`** caps Overpass calls per route
-with a counter, giving a hard ceiling of 29 + 20 = **49**, one under the limit.
-A test asserts that ceiling stays under 50, so raising `MAX_SAMPLES` fails
-loudly rather than silently truncating a route.
+The untried option remains routing Overpass through a **non-Cloudflare proxy**.
 
-On gatlingburg the cap is genuinely reached — 20 requests for 7 chunks, because
-the primary keeps failing and getting retried. There is no headroom to raise it;
-the fix is a working endpoint, not a bigger budget.
+#### Wall time: measured, and where the cliff is
 
-Wall time for a long route is now 40–60 s. The loading state covers it.
+| stage | Decatur (35 searches) | gatlingburg (90 searches) |
+| --- | --- | --- |
+| Places | **0.5 s** | **3.2 s** |
+| Overpass | 20.2 s (budget) | 26.3 s |
+| **total** | **21.9 s** | **32.1 s** |
+
+Places is not the problem and never was: 90 searches in 3.2 s, because they run
+12-at-a-time in parallel. **Overpass is essentially all of the wall time**, and
+before it was bounded a single Decatur ingest took **285 s**, then 103 s, then
+62 s as each bound was added.
+
+The Cloudflare edge cliff is **higher than the ~100 s** we assumed — a 285 s
+request completed successfully — but it is not a number to lean on. The real
+limit is the caller: she should not wait minutes. At ~22-32 s the loading state
+covers it. **If a future change pushes past ~60 s, cut the Overpass budget
+before anything else** — it buys the most time for the least data.
+
+#### Subrequest budget — the 50 figure was wrong
+
+Earlier notes said the ceiling was 50 subrequests with zero headroom. **That is
+the free-tier number and this account is on the paid plan** — confirmed by a
+request logging 123 ms of CPU, which the free tier's 10 ms cap would have
+killed. The real ceiling is **1000 subrequests per request**.
+
+Current usage: 2 geocode + 1 routing + 90 Places + 1 Places text = 94 Google,
+plus at most 20 Overpass = **114 of 1000**. There is a great deal of headroom,
+and the test now asserts against the paid ceiling.
+
+**Call count is not the constraint. Wall time and Places billing are.** 90
+Enterprise-SKU searches per route is a real cost; check it before raising the
+tiling density.
 
 ## In flight
 
