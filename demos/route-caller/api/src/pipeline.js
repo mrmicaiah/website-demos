@@ -7,6 +7,61 @@ import { normalizeName, isFranchise, isHomeDaycare } from './heuristics.js';
 const DEDUPE_RADIUS_M = 150;
 
 /**
+ * Google occasionally types a big-box store as a child care result (a Target came
+ * back on the Decatur route, presumably from an in-store care listing).
+ *
+ * This is deliberately a DENY-list, never an allow-list, and it reads only
+ * `primaryType` — never the name. Legitimate child care runs inside churches,
+ * community centres, YMCAs and schools, so anything ambiguous is kept. A row with
+ * no primaryType at all is kept too: the filter fails open.
+ */
+const RETAIL_TYPES = new Set([
+  'department_store',
+  'discount_store',
+  'supermarket',
+  'grocery_store',
+  'grocery_or_supermarket',
+  'shopping_mall',
+  'convenience_store',
+  'clothing_store',
+  'shoe_store',
+  'jewelry_store',
+  'furniture_store',
+  'home_improvement_store',
+  'hardware_store',
+  'electronics_store',
+  'book_store',
+  'pet_store',
+  'sporting_goods_store',
+  'liquor_store',
+  'warehouse_store',
+  'wholesaler',
+  'gas_station',
+  'car_dealer',
+  'car_repair',
+  'pharmacy',
+  'drugstore',
+  'bank',
+]);
+
+export function isRetailNonChildcare(candidate) {
+  return RETAIL_TYPES.has(candidate?.primaryType);
+}
+
+/**
+ * Split candidates into the ones we keep and the retail rows we drop, so the
+ * exclusions can be reported rather than disappearing silently.
+ */
+export function partitionRetail(candidates) {
+  const kept = [];
+  const excluded = [];
+  for (const candidate of candidates) {
+    (isRetailNonChildcare(candidate) ? excluded : kept).push(candidate);
+  }
+  return { kept, excluded };
+}
+
+/**
  * Same normalized name within 150 m = same facility. The record with a phone
  * number wins; `source` becomes 'both' when Google and OSM agree on a place.
  */

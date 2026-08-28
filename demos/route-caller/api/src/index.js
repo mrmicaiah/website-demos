@@ -8,7 +8,7 @@
 import { decodePolyline, simplifyByDistance, buildRouteIndex, samplePointsAlong } from './geo.js';
 import { ApiError, geocode, computeRoute, searchNearby, searchAlongRoute } from './google.js';
 import { fetchOverpass } from './overpass.js';
-import { mergeCandidates, placeOnRoute } from './pipeline.js';
+import { mergeCandidates, placeOnRoute, partitionRetail } from './pipeline.js';
 
 const CORRIDOR_M = 16000; // 10 miles
 const SAMPLE_INTERVAL_M = 8000;
@@ -101,8 +101,22 @@ async function createRoute(request, env) {
     osmStatus = `unavailable: ${String(err.message).slice(0, 120)}`;
   }
 
+  // Drop big-box retail Google mistyped as child care, before the merge so an OSM
+  // row can't resurrect one. OSM candidates carry no primaryType and pass through.
+  const { kept, excluded } = partitionRetail(googleLists.flat());
+  const excludedTypes = {};
+  for (const row of excluded) {
+    excludedTypes[row.primaryType] = (excludedTypes[row.primaryType] || 0) + 1;
+  }
+  if (excluded.length) {
+    console.log(
+      `route "${name}": excluded ${excluded.length} retail result(s):`,
+      excluded.map((r) => `${r.name} (${r.primaryType})`).join(', ')
+    );
+  }
+
   const facilities = placeOnRoute(
-    mergeCandidates([...googleLists, osmResults]),
+    mergeCandidates([kept, osmResults]),
     routeIndex,
     CORRIDOR_M
   );
@@ -135,7 +149,14 @@ async function createRoute(request, env) {
   }
 
   const route = await selectRoute(env, routeId);
-  return json({ route, facilities: await selectFacilities(env, routeId) }, 201);
+  return json(
+    {
+      route,
+      facilities: await selectFacilities(env, routeId),
+      meta: { excluded_retail: excluded.length, excluded_types: excludedTypes },
+    },
+    201
+  );
 }
 
 async function listRoutes(env) {

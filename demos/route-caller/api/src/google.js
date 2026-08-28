@@ -15,16 +15,21 @@ const FULL_MASK = [
   'places.displayName',
   'places.formattedAddress',
   'places.location',
+  'places.primaryType',
   'places.nationalPhoneNumber',
   'places.addressComponents',
 ].join(',');
 
-// Fallback if the account's Places SKU rejects the richer mask.
+// Fallback if the account's Places SKU rejects the richer mask. `primaryType` sits
+// in the same Pro tier as displayName/formattedAddress/location, so keeping it here
+// costs nothing the lean mask wasn't already paying — and the retail deny-list needs
+// it. If a response omits it anyway, the deny-list fails open and keeps the row.
 const LEAN_MASK = [
   'places.id',
   'places.displayName',
   'places.formattedAddress',
   'places.location',
+  'places.primaryType',
 ].join(',');
 
 export async function geocode(address, key) {
@@ -182,6 +187,7 @@ function toCandidate(place) {
     phone: place.nationalPhoneNumber || null,
     lat: place.location?.latitude,
     lng: place.location?.longitude,
+    primaryType: place.primaryType || null,
     source: 'google',
     tags: {},
   };

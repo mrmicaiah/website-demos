@@ -8,7 +8,13 @@ import {
   nearestOnRoute,
   samplePointsAlong,
 } from '../src/geo.js';
-import { mergeCandidates, placeOnRoute, byDriveOrder } from '../src/pipeline.js';
+import {
+  mergeCandidates,
+  placeOnRoute,
+  byDriveOrder,
+  partitionRetail,
+  isRetailNonChildcare,
+} from '../src/pipeline.js';
 import { isFranchise, isHomeDaycare, normalizeName } from '../src/heuristics.js';
 
 let passed = 0;
@@ -222,6 +228,55 @@ check('position still outranks distance', () => {
   const early = { name: 'B', position_along_route_m: 1000, distance_from_route_m: 9000 };
   const late = { name: 'A', position_along_route_m: 2000, distance_from_route_m: 100 };
   assert(byDriveOrder(early, late) < 0, 'earlier on the route wins regardless of offset');
+});
+
+console.log('retail deny-list');
+check('a big-box store typed as retail is excluded', () => {
+  assert(isRetailNonChildcare({ name: 'Target', primaryType: 'department_store' }));
+  assert(isRetailNonChildcare({ name: 'Kroger', primaryType: 'supermarket' }));
+  assert(isRetailNonChildcare({ name: 'Parkway Place', primaryType: 'shopping_mall' }));
+});
+check('churches, YMCAs, community centres and schools are always kept', () => {
+  const keepers = [
+    { name: 'St Paul’s Lutheran Church & Preschool', primaryType: 'church' },
+    { name: 'Grace Baptist Church', primaryType: 'place_of_worship' },
+    { name: 'YMCA of Huntsville', primaryType: 'gym' },
+    { name: 'Heart of the Valley YMCA', primaryType: 'fitness_center' },
+    { name: 'Northside Community Center', primaryType: 'community_center' },
+    { name: 'Whitesburg Elementary School', primaryType: 'primary_school' },
+    { name: 'Decatur City Head Start', primaryType: 'school' },
+    { name: 'Little Acorns', primaryType: 'child_care_agency' },
+    { name: 'Bright Beginnings', primaryType: 'preschool' },
+  ];
+  for (const row of keepers) {
+    assert(!isRetailNonChildcare(row), `${row.name} (${row.primaryType}) should be kept`);
+  }
+});
+check('anything without a primaryType is kept — the filter fails open', () => {
+  // OSM candidates and lean-mask Google responses have no primaryType.
+  assert(!isRetailNonChildcare({ name: 'Learning Zone', source: 'osm' }));
+  assert(!isRetailNonChildcare({ name: 'Learning Zone', primaryType: null }));
+  assert(!isRetailNonChildcare({}));
+  assert(!isRetailNonChildcare(undefined));
+});
+check('the name is never consulted', () => {
+  // A real child care centre that happens to be called Target Learning stays in;
+  // a Target typed as a department store goes, whatever it is called.
+  assert(!isRetailNonChildcare({ name: 'Target Learning Academy', primaryType: 'preschool' }));
+  assert(isRetailNonChildcare({ name: 'Sunny Days Learning Center', primaryType: 'department_store' }));
+});
+check('partitionRetail splits the list and reports what it dropped', () => {
+  const { kept, excluded } = partitionRetail([
+    { name: 'Target', primaryType: 'department_store' },
+    { name: 'St Paul’s Church Preschool', primaryType: 'church' },
+    { name: 'Ardent Preschool', source: 'osm' },
+    { name: 'YMCA of Huntsville', primaryType: 'gym' },
+    { name: 'Publix', primaryType: 'grocery_store' },
+  ]);
+  assert(kept.length === 3, `expected 3 kept, got ${kept.length}`);
+  assert(excluded.length === 2, `expected 2 excluded, got ${excluded.length}`);
+  assert(excluded.map((r) => r.name).join(',') === 'Target,Publix', 'the right rows dropped');
+  assert(!kept.some((r) => r.primaryType === 'department_store'), 'no retail survived');
 });
 
 console.log('heuristics');
