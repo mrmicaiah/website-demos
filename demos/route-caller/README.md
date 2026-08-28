@@ -16,7 +16,7 @@ demos/route-caller/
                               0003_add_is_school_program.sql
                               0004_add_website_and_playground.sql
                               0005_add_route_corridor.sql
-    test/geo.test.mjs  test/queries.test.mjs
+    test/geo.test.mjs  test/queries.test.mjs  test/enrich.test.mjs
 ```
 
 The frontend never sees an API key. Every Google call is proxied through the
@@ -57,6 +57,7 @@ Base URL is the deployed Worker. CORS is open for GET/POST/PATCH.
 | `POST` | `/api/routes` | `{ name, start_address, end_address }` → runs the pipeline, returns `{ route, facilities, meta }` |
 | `GET` | `/api/routes` | routes with `facility_count`, `called_count`, `flagged_count` |
 | `GET` | `/api/routes/:id` | route + facilities in drive order |
+| `POST` | `/api/routes/:id/enrich` | re-check a route in place: update enrichment columns, insert newly found facilities, never touch status/flags/notes |
 | `PATCH` | `/api/facilities/:id` | any of `{ status, flagged, notes }` → updated row |
 | `GET` | `/api/health` | liveness + whether the Google secret is set |
 
@@ -154,7 +155,7 @@ static server (`npx serve demos/route-caller`).
 cd demos/route-caller/api && npm test
 ```
 
-105 checks: 95 over the corridor math and merge logic: polyline decoding against
+126 checks: 95 over the corridor math and merge logic: polyline decoding against
 Google's reference string, haversine distances against known values,
 perpendicular distance to a route, projection along it (including L-shaped
 routes and points that clamp past either end), route simplification, sampling,

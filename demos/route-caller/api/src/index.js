@@ -21,6 +21,13 @@ import {
   summarizeExcluded,
 } from './pipeline.js';
 import { ROUTE_LIST_SQL } from './queries.js';
+import {
+  matchCandidates,
+  enrichmentPatch,
+  assertPatchIsSafe,
+  snapshotOf,
+  verifySnapshot,
+} from './enrich.js';
 
 // Ingest wide, filter narrow. Her decision: store the full 30-mile corridor so
 // widening the view is a UI toggle rather than a re-search. Every facility keeps
@@ -76,6 +83,9 @@ export default {
 
       const routeMatch = path.match(/^\/api\/routes\/([\w-]+)$/);
       if (routeMatch && method === 'GET') return await getRoute(env, routeMatch[1]);
+
+      const enrichMatch = path.match(/^\/api\/routes\/([\w-]+)\/enrich$/);
+      if (enrichMatch && method === 'POST') return await enrichRoute(env, enrichMatch[1]);
 
       const facMatch = path.match(/^\/api\/facilities\/([\w-]+)$/);
       if (facMatch && method === 'PATCH') return await patchFacility(request, env, facMatch[1]);
@@ -223,13 +233,14 @@ async function createRoute(request, env) {
       env.DB.prepare(
         `INSERT INTO facilities
            (id, route_id, name, address, city, zip, phone, website, lat, lng,
-            source, primary_type, distance_from_route_m, position_along_route_m,
+            source, primary_type, google_place_id,
+            distance_from_route_m, position_along_route_m,
             is_franchise, is_home_daycare, is_school_program,
             playground_nearby, playground_unlikely)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.website || null,
-        f.lat, f.lng, f.source, f.primaryType || null,
+        f.lat, f.lng, f.source, f.primaryType || null, f.googlePlaceId || null,
         f.distance_from_route_m, f.position_along_route_m,
         f.is_franchise, f.is_home_daycare, f.is_school_program,
         f.is_playground_nearby, f.is_playground_unlikely
@@ -266,6 +277,181 @@ async function createRoute(request, env) {
     },
     201
   );
+}
+
+/**
+ * Re-check a route's data in place. Built for routes the caller is actively
+ * working, which can never be re-ingested without destroying her calls.
+ *
+ * Existing rows gain enrichment columns only; new facilities are inserted
+ * alongside them; nothing is ever deleted. Her status, flags and notes are
+ * snapshotted before any write and verified afterwards, in production, every
+ * time.
+ */
+async function enrichRoute(env, routeId) {
+  const startedAt = Date.now();
+  const key = env.GOOGLE_MAPS_API_KEY;
+  if (!key) {
+    return json(
+      { error: 'GOOGLE_MAPS_API_KEY is not set on the Worker. Run: wrangler secret put GOOGLE_MAPS_API_KEY' },
+      503
+    );
+  }
+
+  const route = await selectRoute(env, routeId);
+  if (!route) return json({ error: 'Route not found' }, 404);
+  const existing = await selectFacilities(env, routeId);
+  const before = snapshotOf(existing);
+
+  const points = decodePolyline(route.polyline);
+  if (points.length < 2) throw new ApiError('Stored polyline could not be decoded', 500);
+  const routeIndex = buildRouteIndex(simplifyByDistance(points, 200));
+  const samples = samplePointsAlong(routeIndex, SAMPLE_INTERVAL_M, MAX_SAMPLES);
+  const searchPoints = corridorSearchPoints(routeIndex, samples, SEARCH_RADIUS_M, LATERAL_RINGS);
+
+  const googleLists = [];
+  for (let i = 0; i < searchPoints.length; i += SEARCH_CONCURRENCY) {
+    const batch = searchPoints.slice(i, i + SEARCH_CONCURRENCY);
+    const found = await Promise.all(
+      batch.map((point) => searchNearby(point, key, SEARCH_RADIUS_M).catch(() => []))
+    );
+    googleLists.push(...found);
+  }
+
+  let osmStatus = 'ok';
+  let osmResults = [];
+  let playgrounds = [];
+  try {
+    const overpass = await fetchOverpass(samples, OSM_CORRIDOR_M, {
+      endpoints: endpointList(env.OVERPASS_URL),
+    });
+    osmResults = overpass.facilities;
+    playgrounds = overpass.playgrounds;
+    if (!overpass.chunksOk) {
+      osmStatus = `unavailable: ${String(overpass.lastError || 'no chunks served').slice(0, 120)}`;
+    } else if (overpass.chunksOk < overpass.chunksTotal) {
+      osmStatus = `partial: ${overpass.chunksOk} of ${overpass.chunksTotal} chunks`;
+    }
+  } catch (err) {
+    osmStatus = `unavailable: ${String(err.message).slice(0, 120)}`;
+  }
+
+  const { kept } = partitionRetail(googleLists.flat());
+  const candidates = placeOnRoute(
+    mergeCandidates([kept, osmResults]),
+    routeIndex,
+    CORRIDOR_M,
+    playgrounds
+  );
+
+  const { updates, inserts, ambiguous } = matchCandidates(candidates, existing);
+
+  const filled = { websites: 0, primary_types: 0, phones: 0, playgrounds: 0, place_ids: 0 };
+  const flagsChanged = [];
+  const failures = [];
+  const statements = [];
+
+  for (const { row, candidate } of updates) {
+    const patch = enrichmentPatch(row, candidate, Boolean(candidate.is_playground_nearby));
+    if (!patch) continue;
+    assertPatchIsSafe(patch);
+
+    if (patch.website) filled.websites++;
+    if (patch.primary_type) filled.primary_types++;
+    if (patch.phone) filled.phones++;
+    if (patch.playground_nearby) filled.playgrounds++;
+    if (patch.google_place_id) filled.place_ids++;
+    for (const flag of ['is_school_program', 'is_franchise', 'is_home_daycare', 'playground_unlikely']) {
+      if (patch[flag] !== undefined) {
+        flagsChanged.push({ name: row.name, flag, from: row[flag] ? 1 : 0, to: patch[flag] });
+      }
+    }
+
+    const columns = Object.keys(patch);
+    statements.push({
+      id: row.id,
+      statement: env.DB.prepare(
+        `UPDATE facilities SET ${columns.map((c) => `${c} = ?`).join(', ')},
+           updated_at = datetime('now')
+         WHERE id = ?`
+      ).bind(...columns.map((c) => patch[c]), row.id),
+    });
+  }
+
+  const inserted = inserts.map((f) => ({ ...f, id: crypto.randomUUID() }));
+  for (const f of inserted) {
+    statements.push({
+      id: f.id,
+      statement: env.DB.prepare(
+        `INSERT INTO facilities
+           (id, route_id, name, address, city, zip, phone, website, lat, lng,
+            source, primary_type, google_place_id,
+            distance_from_route_m, position_along_route_m,
+            is_franchise, is_home_daycare, is_school_program,
+            playground_nearby, playground_unlikely)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.website || null,
+        f.lat, f.lng, f.source, f.primaryType || null, f.googlePlaceId || null,
+        f.distance_from_route_m, f.position_along_route_m,
+        f.is_franchise, f.is_home_daycare, f.is_school_program,
+        f.is_playground_nearby, f.is_playground_unlikely
+      ),
+    });
+  }
+
+  // Batched for speed, but a failing batch is retried row by row so one bad row
+  // cannot take the rest down silently.
+  for (let i = 0; i < statements.length; i += 50) {
+    const chunk = statements.slice(i, i + 50);
+    try {
+      await env.DB.batch(chunk.map((s) => s.statement));
+    } catch {
+      for (const item of chunk) {
+        try {
+          await item.statement.run();
+        } catch (err) {
+          failures.push({ id: item.id, error: String(err.message).slice(0, 160) });
+        }
+      }
+    }
+  }
+
+  await env.DB.prepare('UPDATE routes SET corridor_m = ?, osm_status = ? WHERE id = ?')
+    .bind(CORRIDOR_M, osmStatus, routeId)
+    .run();
+
+  // Verify her work survived, against the database, not against our intentions.
+  const after = snapshotOf(await selectFacilities(env, routeId));
+  const verification = verifySnapshot(before, after);
+  if (!verification.ok) {
+    console.error(
+      `ENRICH SNAPSHOT VIOLATION on route ${routeId}:`,
+      JSON.stringify(verification.violations).slice(0, 600)
+    );
+  }
+
+  return json({
+    route: await selectRoute(env, routeId),
+    facilities: await selectFacilities(env, routeId),
+    enrichment: {
+      rows_before: existing.length,
+      rows_updated: statements.length - inserted.length - failures.length,
+      rows_inserted: inserted.length,
+      fields_filled: filled,
+      flags_changed: flagsChanged,
+      ambiguous_matches: ambiguous.map((a) => ({
+        candidate: a.candidate.name,
+        matches: a.rows.map((r) => r.name),
+      })),
+      row_failures: failures,
+      snapshot_verified: verification.ok,
+      snapshot_violations: verification.violations,
+      osm_status: osmStatus,
+      corridor_m: CORRIDOR_M,
+      elapsed_ms: Date.now() - startedAt,
+    },
+  });
 }
 
 async function listRoutes(env) {

@@ -108,6 +108,7 @@ function absorb(target, incoming) {
   target.zip = target.zip || incoming.zip;
   target.primaryType = target.primaryType || incoming.primaryType || null;
   target.website = target.website || incoming.website || null;
+  target.googlePlaceId = target.googlePlaceId || incoming.googlePlaceId || null;
   target.tags = { ...(incoming.tags || {}), ...(target.tags || {}) };
   if (target.source !== incoming.source) target.source = 'both';
 }
@@ -125,6 +126,7 @@ export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000, 
       ...f,
       primaryType: f.primaryType || null,
       website: f.website || null,
+      googlePlaceId: f.googlePlaceId || null,
       distance_from_route_m: Math.round(distanceMeters),
       position_along_route_m: Math.round(positionMeters),
       is_franchise: isFranchise(f.name) ? 1 : 0,

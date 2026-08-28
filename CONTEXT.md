@@ -104,6 +104,26 @@ them only with a reason better than the one recorded here.
   open/closed) plus a replay queue for `PATCH`es that failed while offline.
   Never call data.
 
+**Enrich, never re-ingest, once a route has been worked**
+
+- **A route with call activity is never re-ingested.** Re-ingesting deletes and
+  rebuilds its rows, which destroys her status, flags and notes. Instead,
+  `POST /api/routes/:id/enrich` updates the enrichment columns of existing rows
+  in place, inserts newly discovered facilities alongside them, widens
+  `routes.corridor_m`, and deletes nothing.
+- **Enrichment may only write enrichment columns.** `status`, `flagged`,
+  `notes`, `name`, `id` and the geometry are off limits, enforced by
+  `assertPatchIsSafe` rather than left to care. `phone`, `website` and
+  `primary_type` fill only from NULL — she may have corrected a number or be
+  dialling it right now. `playground_nearby` only ever goes 0 → 1, because
+  Overpass is often partial and a missing playground is not evidence of none.
+- **Every run snapshots her columns before writing and verifies them after**,
+  in production, not only in tests. A failed verification is reported loudly in
+  the response and logged as an error.
+- **Ambiguous matches update nothing.** When an incoming result matches two
+  stored rows, guessing would write one facility's data onto another's row on a
+  route she is calling. They are reported for review instead.
+
 **Ingest wide, filter narrow**
 
 - **The full 30-mile corridor is ingested and stored; the UI narrows it.** Her

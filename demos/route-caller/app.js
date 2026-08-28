@@ -50,6 +50,8 @@
     hiddenBar: $('hidden-bar'),
     hiddenSummary: $('hidden-summary'),
     toggleHidden: $('toggle-hidden'),
+    btnEnrich: $('btn-enrich'),
+    enrichStatus: $('enrich-status'),
     toggleMap: $('toggle-map'),
     mapPanel: $('map-panel'),
     cards: $('cards'),
@@ -178,6 +180,12 @@
   }
 
   const hideBanner = () => { el.banner.hidden = true; };
+
+  function showEnrichStatus(message, isError = false) {
+    el.enrichStatus.textContent = message;
+    el.enrichStatus.hidden = false;
+    if (isError) showBanner(message, true);
+  }
 
   /* ---------------- landing ---------------- */
 
@@ -741,6 +749,49 @@
     prefs.sort = prefs.sort === 'capacity' ? 'drive' : 'capacity';
     savePrefs();
     render();
+  });
+
+  /* Re-check a route's data in place. Safe on a route she is mid-way through:
+     the server never touches status, flags or notes, and verifies that after
+     every run. The confirm step says so in her words. */
+  el.btnEnrich.addEventListener('click', async () => {
+    const ok = window.confirm(
+      'Update route data?\n\n' +
+        'This re-checks this route for new places, websites and playgrounds. ' +
+        'It takes about a minute.\n\n' +
+        'It never touches your calls, flags or notes.'
+    );
+    if (!ok) return;
+
+    el.btnEnrich.disabled = true;
+    el.btnEnrich.textContent = 'Updating…';
+    showEnrichStatus('Re-checking this route. This takes about a minute…');
+    try {
+      const data = await api(`/api/routes/${state.route.id}/enrich`, { method: 'POST' });
+      state.route = data.route;
+      state.facilities = data.facilities || [];
+      const e = data.enrichment || {};
+      const gained = e.fields_filled || {};
+      const parts = [
+        `${e.rows_inserted || 0} new place${e.rows_inserted === 1 ? '' : 's'}`,
+        `${gained.websites || 0} websites`,
+        `${gained.playgrounds || 0} playgrounds`,
+      ];
+      let message = `Updated: ${parts.join(', ')}. Your calls and notes are unchanged.`;
+      if (e.snapshot_verified === false) {
+        message = 'Update finished but the safety check FAILED — tell Micaiah before calling on.';
+      } else if (String(e.osm_status || '').startsWith('partial')) {
+        message += ' Playground data is partial this run.';
+      }
+      showEnrichStatus(message);
+      render();
+      loadRoutes();
+    } catch (err) {
+      showEnrichStatus(`Could not update: ${err.message}`, true);
+    } finally {
+      el.btnEnrich.disabled = false;
+      el.btnEnrich.textContent = 'Update route data';
+    }
   });
 
   el.toggleHidden.addEventListener('click', () => {

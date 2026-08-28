@@ -190,6 +190,7 @@ function toCandidate(place) {
   const parsed = parseAddress(formatted);
   return {
     externalId: place.id,
+    googlePlaceId: place.id || null,
     name: place.displayName?.text || 'Unnamed facility',
     address: formatted,
     city: componentValue(place.addressComponents, 'locality') || parsed.city,

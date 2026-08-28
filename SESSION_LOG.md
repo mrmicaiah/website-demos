@@ -5,6 +5,68 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — In-place enrichment: the endpoint that runs on live work
+
+The most safety-critical change so far, because its whole purpose is to run
+against a route the caller is in the middle of. `POST /api/routes/:id/enrich`
+updates enrichment columns on existing rows, inserts newly discovered facilities
+beside them, widens the corridor, and deletes nothing.
+
+### The rails, and why each one is shaped that way
+
+- **`assertPatchIsSafe` throws** if an update patch contains `status`, `flagged`,
+  `notes`, `name`, `id` or geometry. Enforcement rather than care: the code that
+  builds patches is the code most likely to be edited by someone in a hurry.
+- **`phone`, `website` and `primary_type` fill only from NULL.** She may have
+  corrected a number or be dialling it as the run happens. A fresher value from
+  Google is not worth overwriting that.
+- **`playground_nearby` only ever goes 0 → 1.** Overpass is partial more often
+  than not; clearing the flag on a bad day would destroy a real signal.
+- **Ambiguous matches update nothing.** Two stored rows inside the tolerance
+  means writing one facility's data onto another's row. Reported, not guessed.
+- **Snapshot before, verify after, in production.** Not a test-only assertion —
+  every run re-reads her columns from the database and compares. A violation is
+  returned in the response and logged as an error.
+- **Batches fall back to row-by-row on failure**, so one bad row cannot take the
+  rest down quietly.
+
+### Proving it, rather than asserting it
+
+Connecticut is the route this was built for, and it had **no call activity left
+to protect** — its single call was reset through the UI before this work. Running
+enrichment there would have proved nothing about the rails.
+
+So a real call state was planted on Decatur — `interested` + flag + "Decision
+maker Denise, call back Thu 2pm", a `voicemail` with notes, a flagged
+`not_interested` — then enrichment was run across **225 row updates**, and the
+three rows were re-read with an independent query afterwards. Byte-for-byte
+identical: status, flag, notes and phone. Then the test data was removed.
+
+That is the difference between a safety rail that is tested and one that is
+known to work.
+
+### What Connecticut gained
+
+**213 rows → 1,118.** 740 websites where it had none, 1,036 place ids, and
+**524 rows beyond 10 miles** that it could never have had — the distance lens
+finally unlocks on the route that most needed it. `snapshot_verified: true`, no
+violations, no ambiguous matches, no row failures, 32 s.
+
+### Honest gaps
+
+Decatur's playground badges did **not** come back: Overpass returned 502
+throughout, so `playground_nearby` stayed 0. gatlingburg was deliberately left
+alone for the same reason — its partial OSM cannot improve while Overpass is
+failing. Both are the Overpass problem, and enrichment is now the cheap way to
+retry on a healthier day, which is itself the point of having it.
+
+Migration 0006 adds `google_place_id`, captured at both ingest and enrich, so
+future runs match on a stable key rather than name and geography. Connecticut's
+1,036 captured ids mean its next enrichment will be more precise than this one
+could be.
+
+---
+
 ## 2026-08-28 — The boundary sharpens: early childhood in, school-age out
 
 Her second round of feedback moved the line, and moved it somewhere the previous

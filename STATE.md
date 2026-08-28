@@ -44,6 +44,9 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
 - **Early-childhood boundary (2026-08-28, her second round)** — schools,
   colleges and private prep are hidden; early childhood never is. See the locked
   decision in `CONTEXT.md`. All three routes re-backfilled in place.
+- **In-place enrichment** — `POST /api/routes/:id/enrich` plus an "Update route
+  data" action in the route header, with a confirm step in her words. Safe on a
+  route mid-call; see the locked pattern in `CONTEXT.md`.
 - **Route cards lead with the usable list** — `GET /api/routes` returns
   `visible_count` (total minus every hidden category) alongside `facility_count`,
   and `called_count`/`flagged_count` count visible rows only so progress can
@@ -65,50 +68,67 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **105 tests passing** — `cd demos/route-caller/api && npm test` (95 unit checks
+- **126 tests passing** — `cd demos/route-caller/api && npm test` (95 unit checks
   plus 10 that run the real route-list SQL against real SQLite built from the
   real migrations, via `node:sqlite`).
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
 
-| route | id | corridor | rows | ≤10mi | ≤20mi | school | no-play | playground | visible | calls |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 163 | 203 | 25 | 2 | 0 | **187** | none |
-| here to gatlingburg | `82aa0773` | 30 mi | 663 | 447 | 595 | 101 | 9 | 9 | **520** | none |
-| Connecticut to Rhode Island | `b18c249a` | **10 mi** | 213 | 213 | — | 36 | 5 | 0 | **150** | none |
+| route | id | corridor | rows | visible | websites | school | playground | calls |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Connecticut to Rhode Island | `b18c249a` | 30 mi | **1118** | 912 | 740 | — | 0 | none |
+| here to gatlingburg | `82aa0773` | 30 mi | 663 | 520 | 409 | 101 | 9 | none |
+| Decatur to Huntsville Test | `b029fa32` | 30 mi | 227 | 187 | 161 | 25 | 0 | none |
+| White plains, CT to Prividence | `81b9cfd8` | 30 mi | 977 | 803 | — | — | — | none |
 
-- Decatur and gatlingburg were re-ingested 2026-08-28 at the **30-mile corridor**
-  and carry `corridor_m = 48280`. Both roughly tripled in size.
+- All four routes now carry `corridor_m = 48280`. Connecticut reached it by
+  **enrichment**, the others by re-ingest.
+- **"White plains, CT to Prividence"** (`81b9cfd8`) was created by the user
+  during this session and has not been enriched; it was ingested at 30 miles so
+  it does not need it.
+- **Decatur's playground badges were NOT restored** by its enrichment run:
+  Overpass returned 502 throughout, so `playground_nearby` stayed 0. That is the
+  Overpass problem, not an enrichment one — re-run enrich on a day Overpass is
+  healthy and the badges come back. **gatlingburg was deliberately not enriched**
+  for the same reason: its `partial: 1 of 5 chunks` cannot improve while Overpass
+  is failing.
 - **Connecticut is stuck at 10 miles** (`corridor_m = 16000`) because it has a
   call on it and can never be re-ingested. The UI disables its 20- and 30-mile
   lens options and says why, rather than offering three options that would show
   identical rows.
-- **Never re-ingest Connecticut.** Flag columns are safe to `UPDATE` in place.
-  Note: its one call ("Play To Learn Childcare") was reset to `not_called` at
-  21:39 on 2026-08-28 by someone using the UI, so the route currently shows zero
-  activity. The never-re-ingest rule still stands — its stored rows only reach
-  10 miles and re-ingesting would be the only way to widen them, which is the
-  enrichment gap below, not a licence to rebuild it.
+- **Never re-ingest a route that has been worked — enrich it instead.** That is
+  now a real option rather than a gap; see below. Connecticut's own call ("Play
+  To Learn Childcare") was reset to `not_called` through the UI on 2026-08-28,
+  so it currently shows zero activity, but the rule stands regardless.
 
-#### The Connecticut enrichment gap
+#### The enrichment gap is closed
 
-Connecticut has **no `website` data and no `playground_nearby` data**, and it
-cannot get them without a re-ingest, which is forbidden. Both columns are
-NULL/0 across all 213 rows.
+`POST /api/routes/:id/enrich` re-checks a route in place. It is the answer to
+"this route has call activity but stale data", which was previously a dead end.
 
-The frontend handles this rather than lying about it: the "no website" badge is
-suppressed entirely on any route where *no* row has a website, because in that
-case the null is a property of the ingest, not of the facility. Without that
-guard all 213 Connecticut rows would have worn a false prospecting badge. The
-"No website" filter option is likewise inert on that route.
+- Existing rows gain `website`, `primary_type`, `google_place_id`,
+  `playground_nearby` and recomputed classifier flags.
+- Newly discovered facilities are **inserted** out to the full 30-mile tiled
+  corridor, so a route ingested at 10 miles gains its wider data.
+- `routes.corridor_m` widens, unlocking the distance lens.
+- Nothing is ever deleted, and her columns are snapshotted before and verified
+  after every run.
 
-**The fix, not yet built: a batched in-place enrichment endpoint** — something
-like `POST /api/routes/:id/enrich` that re-queries Places and Overpass for the
-route's existing rows and `UPDATE`s only the enrichment columns (`website`,
-`playground_nearby`, `primary_type`), never touching `status`, `flagged`,
-`notes`, or row identity. That is the general answer to "this route has call
-activity but stale enrichment", which will keep recurring as the schema grows.
+**Connecticut, the route this existed for: 213 rows → 1,118.** 740 websites where
+it had none, 1,036 Google place ids captured, **524 rows beyond 10 miles** that
+it could never have had, corridor widened to 30 miles. `snapshot_verified: true`,
+no violations, no ambiguous matches, no row failures.
+
+**The safety rails were proven live, not just in tests.** Connecticut had no call
+activity left to protect (its one call was reset through the UI before this
+work), so a real call state — status, flag and notes across three rows — was
+planted on Decatur, enriched through 225 row updates, and verified byte-for-byte
+afterwards with an independent query. Then removed.
+
+Migration 0006 adds `google_place_id`, captured at both ingest and enrich, so
+future enrichments match on a stable key and only fall back to
+normalized-name-within-150m for legacy rows.
 
 #### The 20-result cap, and why the corridor is tiled
 
