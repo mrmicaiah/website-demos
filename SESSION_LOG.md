@@ -57,6 +57,25 @@ for public schools; a Montessori school is plausibly a customer. The rule was
 implemented as specified rather than quietly narrowed, and the finding is recorded
 in `STATE.md` for her to settle. Reversible either way.
 
+**Backfilled the two user-created routes later the same day**, in place — the
+real classifier from `heuristics.js` run against the stored rows, emitting
+`UPDATE`s by explicit id. No re-ingest, no deletions, and nothing but
+`is_school_program` written, which is what made it safe to touch the Connecticut
+route despite its live call activity. Her one called row was checked against the
+classifier first and does not get flagged, so her work stays visible.
+
+The backfill made the finding above much louder. Across 456 rows the
+`primaryType: school` branch does nearly all the work, and most of what it
+catches is private, not public: on the Connecticut route only **4 of 40** flags
+came from name evidence, the other 36 from type alone — Montessori schools,
+"The Children's School", "Alphabet Academy", a dozen parochial schools. Seven of
+them carry a child-care word in the name that the guard would have caught, had
+type not been allowed to override it. At eight rows this looked like an edge
+case; at forty it looks like the rule's centre of gravity is in the wrong place.
+Applied as specified anyway, because it is reversible and because narrowing a
+rule on the caller's behalf without asking her is the same mistake as deleting
+rows on their names.
+
 **Also fixed while here:** the header counters were computing over every row on
 the route, so "N left" included facilities hidden by the category toggles. With a
 third toggle hiding eight more rows, that gap would have become actively

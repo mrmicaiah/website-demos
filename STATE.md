@@ -39,17 +39,31 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
 - **45 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
-- **Seed route in the database**: "Decatur to Huntsville Test"
-  (`960fa7a2-e150-47d8-9aaa-48a95ea4836f`, re-ingested 2026-08-28 so every
-  Google row carries `primary_type`), **72 facilities, 88% phone coverage**
-  (63 of 72), 11 franchise flags, 8 school flags, 53 visible under the three
-  default hides. Clean state — everything `not_called`, all notes empty.
-  **Do not re-ingest it casually**, and check for call activity first if you do.
-- **Two other routes exist on the live API**, created outside this worker
-  session: "Connecticut to Rhode Island" (213 facilities, **1 call logged — do
-  not re-ingest**) and "here to gatlingburg" (243, no activity). Both predate
-  the school classifier, so their school rows are unflagged; they would need a
-  re-ingest or a name-based backfill `UPDATE` to catch up.
+### Live data — three routes
+
+All three carry school flags as of 2026-08-28; the two user-created routes were
+backfilled in place with the real classifier, never re-ingested.
+
+| route | id | rows | franchise | school | visible | call activity |
+| --- | --- | --- | --- | --- | --- | --- |
+| Decatur to Huntsville Test | `960fa7a2` | 72 | 11 | 8 | 53 | none |
+| here to gatlingburg | `780452dd` | 243 | 20 | 57 | 166 | none |
+| Connecticut to Rhode Island | `b18c249a` | 213 | 19 | 40 | 150 | **1 call** |
+
+- **Decatur to Huntsville Test** is the seed route, re-ingested 2026-08-28 so
+  every Google row carries `primary_type`. 88% phone coverage (63 of 72),
+  `osm_status: ok`. Clean state for the caller's first look. **Do not re-ingest
+  it casually**, and check for call activity first if you do.
+- **Connecticut to Rhode Island has live call activity** — one row,
+  "Play To Learn Childcare", `no_answer`. **Never re-ingest this route**; that
+  would destroy her work. It is safe to `UPDATE` flag columns on it, which is
+  how the school backfill was done.
+- **Both user-created routes are Google-only**: Overpass returned HTTP 521 when
+  they were built, so `osm_status` records `unavailable: Overpass HTTP 521` and
+  they carry no OSM rows at all. That is the graceful-degradation path working,
+  but it means they are missing OSM-only facilities. Re-ingesting would recover
+  those — viable for gatlingburg, **not** for Connecticut.
+- The seed route's 13 OSM rows have no `primary_type`, by design.
 
 ## In flight
 
@@ -59,13 +73,19 @@ Nothing.
 
 1. **Push.** Micaiah pushes; workers do not. Run `git fetch` and check rather
    than assuming — origin has moved underneath this session before.
-2. **Confirm the school flag's edges with the caller.** Three of the eight rows
-   it flags are *private* schools caught by `primaryType: school` — Montessori
-   School of Huntsville, Grace Lutheran School, Valley Fellowship Christian
-   Academy. She asked for public schools, elementary schools and Head Starts;
-   a Montessori school is plausibly a customer. Nothing is lost either way (the
-   toggle is reversible and the data is intact), but ask her before tightening
-   or loosening the rule. See the session log for the reasoning.
+2. **Confirm the school flag's edges with the caller — this got louder at
+   scale.** Backfilling the two longer routes showed the `primaryType: school`
+   branch does most of the work, and most of what it catches is *private*
+   schools, not public ones. On the Connecticut route only **4 of 40** flags
+   come from name evidence (Head Start / public-school patterns); the other 36
+   are type-only, and they include Montessori schools, "The Children's School",
+   "Alphabet Academy" and a dozen parochial schools — several of which are
+   plausible customers. She asked for public schools, elementary schools and
+   Head Starts. Nothing is lost (the toggle is reversible, no row was deleted),
+   but this needs her answer before the flag can be trusted. If she wants it
+   narrowed, the change is to stop treating bare `primaryType: school` as
+   sufficient on its own and require it to agree with a name signal — keeping
+   `primary_school`/`secondary_school` and the Head Start rule as they are.
 3. **The rest of her feedback.** Still the gate on direction: **phase 2 (state
    licensing capacity data)** versus **corridor tuning** (radius, sampling
    density, coverage). Do not scope phase 2 before that conversation — the
