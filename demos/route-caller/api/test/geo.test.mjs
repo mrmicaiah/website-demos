@@ -9,6 +9,13 @@ import {
   samplePointsAlong,
 } from '../src/geo.js';
 import {
+  chunkSamples,
+  mergeChunkResults,
+  splitElements,
+  buildQuery,
+  CHUNK_SIZE,
+} from '../src/overpass.js';
+import {
   mergeCandidates,
   placeOnRoute,
   byDriveOrder,
@@ -596,6 +603,90 @@ check('a missing website is null, not undefined — no website is a real signal'
     16000
   );
   assert(placed[0].website === null, `expected null, got ${placed[0].website}`);
+});
+
+console.log('overpass chunking');
+check('the corridor splits into chunks of at most CHUNK_SIZE', () => {
+  const points = Array.from({ length: 25 }, (_, i) => ({ lat: 39 + i * 0.05, lng: -77 }));
+  const chunks = chunkSamples(points, CHUNK_SIZE);
+  const expected = Math.ceil(25 / CHUNK_SIZE);
+  assert(chunks.length === expected, `25 points at ${CHUNK_SIZE} per chunk should be ${expected}, got ${chunks.length}`);
+  assert(chunks.every((c) => c.length <= CHUNK_SIZE), 'no chunk exceeds the size');
+  assert(chunks.flat().length === 25, 'every point appears exactly once');
+  assert(chunks.flat()[0] === points[0], 'order preserved');
+  assert(chunks.flat()[24] === points[24], 'last point kept');
+});
+check('chunking handles exact multiples, remainders and short routes', () => {
+  const make = (n) => Array.from({ length: n }, (_, i) => ({ lat: 39 + i, lng: -77 }));
+  assert(chunkSamples(make(18), 9).length === 2, 'exact multiple');
+  assert(chunkSamples(make(19), 9).length === 3, 'remainder gets its own chunk');
+  assert(chunkSamples(make(19), 9)[2].length === 1, 'remainder chunk holds the leftover');
+  assert(chunkSamples(make(4), 9).length === 1, 'short route is one chunk');
+  assert(chunkSamples([], 9).length === 0, 'no points, no chunks');
+  assert(chunkSamples(null, 9).length === 0, 'null is tolerated');
+});
+check('the subrequest budget holds for a worst-case route', () => {
+  // 2 geocode + 1 routing + 25 Places nearby + 1 Places text, then chunks.
+  const googleCalls = 2 + 1 + 25 + 1;
+  const chunks = chunkSamples(Array.from({ length: 25 }, () => ({ lat: 39, lng: -77 })), CHUNK_SIZE).length;
+  assert(chunks === 7, `expected 7 chunks at size ${CHUNK_SIZE}, got ${chunks}`);
+  assert(googleCalls + chunks === 36, `expected 36 typical, got ${googleCalls + chunks}`);
+  assert(
+    googleCalls + chunks * 2 < 50,
+    `worst case ${googleCalls + chunks * 2} must stay under the 50-subrequest cap`
+  );
+});
+check('each chunk queries only its own points', () => {
+  const points = [
+    { lat: 39.0, lng: -77.0 },
+    { lat: 40.0, lng: -76.0 },
+  ];
+  const [chunk] = chunkSamples(points, 1);
+  const query = buildQuery(chunk, 16000);
+  assert(query.includes('39.00000,-77.00000'), 'its own point is in the query');
+  assert(!query.includes('40.00000'), "the next chunk's point is not");
+  assert(query.includes('leisure"="playground'), 'playgrounds still requested');
+});
+
+console.log('cross-chunk dedupe');
+check('an element returned by two overlapping chunks appears once', () => {
+  const shared = { externalId: 'osm-node-1', name: 'Shared Daycare', lat: 39.2, lng: -77.0 };
+  const merged = mergeChunkResults([
+    { facilities: [shared, { externalId: 'osm-node-2', name: 'A', lat: 39.1, lng: -77 }], playgrounds: [] },
+    { facilities: [{ ...shared }, { externalId: 'osm-node-3', name: 'B', lat: 39.3, lng: -77 }], playgrounds: [] },
+  ]);
+  assert(merged.facilities.length === 3, `expected 3 unique, got ${merged.facilities.length}`);
+  assert(merged.facilities.filter((f) => f.externalId === 'osm-node-1').length === 1, 'shared row once');
+});
+check('playgrounds dedupe across chunks by element id', () => {
+  const merged = mergeChunkResults([
+    { facilities: [], playgrounds: [{ id: 'osm-way-9', lat: 39.2, lng: -77 }] },
+    { facilities: [], playgrounds: [{ id: 'osm-way-9', lat: 39.2, lng: -77 }, { id: 'osm-way-10', lat: 39.3, lng: -77 }] },
+  ]);
+  assert(merged.playgrounds.length === 2, `expected 2, got ${merged.playgrounds.length}`);
+});
+check('merging tolerates failed chunks and empty results', () => {
+  const merged = mergeChunkResults([
+    { facilities: [{ externalId: 'osm-node-1', name: 'Only One', lat: 39.2, lng: -77 }], playgrounds: [] },
+    undefined,
+    { facilities: [], playgrounds: [] },
+  ]);
+  assert(merged.facilities.length === 1, 'the surviving chunk still contributes');
+  assert(merged.playgrounds.length === 0, 'no playgrounds, no crash');
+  const empty = mergeChunkResults([]);
+  assert(empty.facilities.length === 0 && empty.playgrounds.length === 0, 'nothing in, nothing out');
+});
+check('elements split into facilities and playgrounds, ways use their center', () => {
+  const { facilities, playgrounds } = splitElements([
+    { type: 'node', id: 1, lat: 39.2, lon: -77.0, tags: { amenity: 'childcare', name: 'Little Acorns' } },
+    { type: 'way', id: 2, center: { lat: 39.21, lon: -77.01 }, tags: { leisure: 'playground' } },
+    { type: 'node', id: 3, lat: 39.22, lon: -77.0, tags: { amenity: 'childcare' } },
+    { type: 'node', id: 4, tags: { amenity: 'childcare', name: 'No Coords' } },
+  ]);
+  assert(facilities.length === 1, `unnamed and coordless rows dropped, got ${facilities.length}`);
+  assert(facilities[0].externalId === 'osm-node-1', 'stable external id');
+  assert(playgrounds.length === 1 && playgrounds[0].id === 'osm-way-2', 'way playground kept via center');
+  assert(playgrounds[0].lat === 39.21, 'center coords used');
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

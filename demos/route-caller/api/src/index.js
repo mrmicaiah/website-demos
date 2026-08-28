@@ -105,6 +105,10 @@ async function createRoute(request, env) {
     const overpass = await fetchOverpass(samples, CORRIDOR_M);
     osmResults = overpass.facilities;
     playgrounds = overpass.playgrounds;
+    if (overpass.chunksOk < overpass.chunksTotal) {
+      // Some of the corridor was covered; say so rather than claiming 'ok'.
+      osmStatus = `partial: ${overpass.chunksOk} of ${overpass.chunksTotal} chunks`;
+    }
   } catch (err) {
     // Google-only fallback: facilities still found, but no playground signal.
     osmStatus = `unavailable: ${String(err.message).slice(0, 120)}`;

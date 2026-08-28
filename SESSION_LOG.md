@@ -5,6 +5,58 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — Overpass corridor chunking (and a correction)
+
+### First, the correction
+
+The previous entry and the commit message for `f58c169` both claim the Overpass
+retry set was widened to cover 502/503/521. **It was not.** The patch command
+began with a `cd` into a directory that did not exist from where the shell was;
+the `cd` failed, the rest of the command ran in the wrong directory, changed
+nothing, and I read the passing tests and successful deploy as confirmation
+without checking the file. The claim then propagated into two documents and a
+commit message.
+
+So the 521s attributed to "still failing after the retry widened" were never
+retried at all. The retry is real now, and the lesson is the cheap one: after a
+patch, grep the file for the thing you just claimed to change. The old entry has
+been annotated rather than rewritten.
+
+### Chunking
+
+The corridor query is now split into chunks of sample points, issued
+sequentially a second apart, each with one retry, results deduped across chunks
+by OSM element id — adjacent chunks overlap heavily, since every anchor point
+carries a 16 km radius.
+
+Chunk size was chosen from measurements rather than a guess. On the gatlingburg
+corridor with all four tag clauses: **9 anchor points takes 42 s, 4 takes 4.6 s,
+2 takes 1.9 s.** Overpass's cost is superlinear in anchor count, so the first
+implementation at 9 per chunk was still slow enough to trip an edge timeout. It
+went to 4.
+
+Budget arithmetic is in a comment at the top of `overpass.js` and in `STATE.md`:
+29 Google subrequests plus 7 chunks is 36, or 43 if every chunk retries, against
+a 50 cap. There is a test asserting the worst case stays under it, so raising
+`MAX_SAMPLES` will fail loudly rather than silently truncating a route.
+
+### What chunking did not fix
+
+gatlingburg still returns 521 from the Worker, on 4-point chunks that take under
+five seconds from a laptop. Two attempts, then I stopped rather than thrash.
+
+The investigation was still worth it, because it ruled out both obvious
+explanations: **Overpass is not down** (the exact queries succeed from here) and
+**it is not merely query size** (small fast chunks fail too). What is left is
+something specific to the Worker → overpass-api.de path — most likely how
+Overpass treats Cloudflare Workers egress. The untried next step is a mirror
+endpoint behind an env var, recorded in `STATE.md`.
+
+Reporting "still broken, here is what it isn't" is worth more than another five
+attempts, and the route was left in place either way.
+
+---
+
 ## 2026-08-28 — Narrowed schools, website capture, playground signals
 
 Three user-driven changes, all of them sharpened by one fact that had been
@@ -85,9 +137,12 @@ Worth noting for confidence in the backfill: after re-ingesting, the two rebuilt
 routes were run back through the same reconcile script, and it found **zero**
 rows to change on either. The ingest path and the backfill path agree.
 
-Overpass gave gatlingburg HTTP 521 twice, including after the retry set was
-widened to cover it, so that route is Google-only and has no playground data at
-all. Decatur, ingested minutes earlier, got a clean `ok`. The likely cause is
+Overpass gave gatlingburg HTTP 521 twice, so that route is Google-only and has
+no playground data at all. (Correction, made the following session: the retry
+widening described here never actually landed — a failed `cd` meant the patch ran
+in the wrong directory and silently did nothing, and the claim went into this log
+and the commit message unverified. The 521s in this session were therefore never
+retried. Verify the file, not the exit code.) Decatur, ingested minutes earlier, got a clean `ok`. The likely cause is
 query size and the likely fix is chunking the corridor query; both are in
 `STATE.md`.
 
