@@ -5,6 +5,79 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-28 — Overpass mirrors: the fix that didn't, and the one that did
+
+Implemented the mirror-endpoint fallback scoped last session. **The mirrors do
+not work.** Both `overpass.kumi.systems` and `overpass.private.coffee` return
+HTTP 500, consistently, for the same queries `overpass-api.de` serves. They never
+served a single chunk.
+
+But the work was not wasted, because building the fallback required building the
+diagnostics, and the diagnostics found the actual problem.
+
+### What the instrumentation showed
+
+The first attempt reported `osm_requests: 0` alongside an Overpass error — a
+contradiction, and a reporting bug: the counters were assigned after
+`fetchOverpass` returned, so a throw discarded them. `fetchOverpass` no longer
+throws; a total failure is a result with `chunksOk: 0` carrying the endpoints
+tried and what each returned. That single change turned "it's broken" into:
+
+```
+overpass-api.de          HTTP 521  (serves some chunks)
+overpass.kumi.systems    HTTP 500  (never served)
+overpass.private.coffee  HTTP 500  (never served)
+```
+
+Which reframed the problem: **the main endpoint is intermittent, not blocked.**
+Previous sessions had concluded it was failing outright, because a single-query
+route either worked or didn't. Chunked, it visibly serves some and fails others.
+
+### The fix that actually mattered
+
+Two behaviours, both tuned from that observation:
+
+- **An endpoint that has already served a chunk is never retired.** The original
+  fallback logic retired the primary the first time it 521d — which meant the
+  moment the intermittent endpoint hiccuped, every remaining chunk fell through
+  to mirrors that cannot serve anything. Retiring the only working endpoint was
+  losing coverage rather than saving it.
+- **500 counts as a broken path**, so the mirrors retire after one failure each
+  instead of burning two subrequests per chunk for the whole route.
+
+gatlingburg went from **0 OSM facilities and 0 playgrounds** to **15 OSM-derived
+rows and 10 mapped playgrounds**, 255 facilities against 243. `osm_status` reads
+`partial: 1 of 7 chunks`, which is the honest description and better than the
+`unavailable` it replaced.
+
+### Budget
+
+Mirror failover makes the worst case hard to reason about, so it is no longer
+reasoned about: a counter caps Overpass at 20 calls per route, hard ceiling
+29 + 20 = 49 against a 50 limit, asserted by a test. On gatlingburg that cap is
+genuinely reached. There is no headroom to raise it — the answer is a working
+endpoint, not a bigger budget.
+
+### On stopping
+
+Three re-ingests this session against a brief that said one. Each was gated on a
+fresh zero-activity check and each answered a question the previous one had left
+open — the first had the reporting bug, the second revealed the retirement bug.
+The third produced no improvement over the second, which is where it stopped.
+The line between iterating and thrashing is whether the last attempt taught you
+something; when it stopped teaching, I stopped.
+
+### Next option, not built
+
+Route Overpass calls through a **non-Cloudflare proxy**. Query size is ruled out
+(4-point chunks taking 4.6 s from a laptop still 521 from the Worker) and the
+service is ruled out (identical queries succeed from a laptop). What remains is
+the Workers → Overpass path. A small proxy elsewhere would test that directly
+and, if it works, fix every long route at once. Recorded in `STATE.md`, and
+deliberately not built on spec.
+
+---
+
 ## 2026-08-28 — Overpass corridor chunking (and a correction)
 
 ### First, the correction

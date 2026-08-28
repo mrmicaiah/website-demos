@@ -14,6 +14,9 @@ import {
   splitElements,
   buildQuery,
   CHUNK_SIZE,
+  endpointList,
+  DEFAULT_ENDPOINT,
+  MAX_OVERPASS_REQUESTS,
 } from '../src/overpass.js';
 import {
   mergeCandidates,
@@ -625,16 +628,50 @@ check('chunking handles exact multiples, remainders and short routes', () => {
   assert(chunkSamples([], 9).length === 0, 'no points, no chunks');
   assert(chunkSamples(null, 9).length === 0, 'null is tolerated');
 });
-check('the subrequest budget holds for a worst-case route', () => {
+check('the subrequest budget holds even with mirror failover', () => {
   // 2 geocode + 1 routing + 25 Places nearby + 1 Places text, then chunks.
   const googleCalls = 2 + 1 + 25 + 1;
   const chunks = chunkSamples(Array.from({ length: 25 }, () => ({ lat: 39, lng: -77 })), CHUNK_SIZE).length;
   assert(chunks === 7, `expected 7 chunks at size ${CHUNK_SIZE}, got ${chunks}`);
   assert(googleCalls + chunks === 36, `expected 36 typical, got ${googleCalls + chunks}`);
+  // Mirror fallback makes the worst case awkward to reason about, so it is
+  // enforced by a counter instead. This is the check that it is enforced low
+  // enough: the hard ceiling must stay under the 50-subrequest cap.
   assert(
-    googleCalls + chunks * 2 < 50,
-    `worst case ${googleCalls + chunks * 2} must stay under the 50-subrequest cap`
+    googleCalls + MAX_OVERPASS_REQUESTS < 50,
+    `hard ceiling ${googleCalls + MAX_OVERPASS_REQUESTS} must stay under 50`
   );
+  assert(MAX_OVERPASS_REQUESTS >= chunks, 'the cap must allow at least one call per chunk');
+  // A full failover: primary dies, first mirror dies, second serves every chunk.
+  assert(2 + chunks <= MAX_OVERPASS_REQUESTS, 'a full failover fits inside the cap');
+});
+
+console.log('overpass endpoints');
+check('the endpoint list puts the configured primary first, then mirrors', () => {
+  const list = endpointList();
+  assert(list[0] === DEFAULT_ENDPOINT, 'default primary first');
+  assert(list.length === 3, `expected 3 endpoints, got ${list.length}`);
+  assert(new Set(list).size === 3, 'no duplicates');
+  assert(list.some((u) => u.includes('kumi.systems')), 'kumi mirror present');
+  assert(list.some((u) => u.includes('private.coffee')), 'private.coffee mirror present');
+});
+check('configuring a mirror as primary promotes it without duplicating it', () => {
+  const kumi = 'https://overpass.kumi.systems/api/interpreter';
+  const list = endpointList(kumi);
+  assert(list[0] === kumi, 'configured primary is tried first');
+  assert(new Set(list).size === list.length, 'no duplicate once promoted');
+  assert(list.length === 3, `expected 3, got ${list.length}`);
+});
+check('an unset or empty OVERPASS_URL falls back to the default', () => {
+  assert(endpointList(undefined)[0] === DEFAULT_ENDPOINT);
+  assert(endpointList('')[0] === DEFAULT_ENDPOINT);
+  assert(endpointList(null)[0] === DEFAULT_ENDPOINT);
+});
+check('a custom primary is added, not swapped in for a mirror', () => {
+  const custom = 'https://overpass.example.org/api/interpreter';
+  const list = endpointList(custom);
+  assert(list.length === 4, `custom primary plus both mirrors, got ${list.length}`);
+  assert(list[0] === custom, 'custom first');
 });
 check('each chunk queries only its own points', () => {
   const points = [

@@ -8,5 +8,10 @@ database_name = "route-caller-db"
 database_id = "dd62dbcf-fffd-4432-9e92-51422d16c194"
 migrations_dir = "migrations"
 
+[vars]
+# Primary Overpass endpoint. Mirrors are tried automatically when this one
+# returns a Cloudflare origin error, so this only needs changing to reorder them.
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+
 # GOOGLE_MAPS_API_KEY is a secret, never a var:
 #   wrangler secret put GOOGLE_MAPS_API_KEY

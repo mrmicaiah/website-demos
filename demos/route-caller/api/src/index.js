@@ -7,7 +7,7 @@
 
 import { decodePolyline, simplifyByDistance, buildRouteIndex, samplePointsAlong } from './geo.js';
 import { ApiError, geocode, computeRoute, searchNearby, searchAlongRoute } from './google.js';
-import { fetchOverpass } from './overpass.js';
+import { fetchOverpass, endpointList } from './overpass.js';
 import {
   mergeCandidates,
   placeOnRoute,
@@ -101,16 +101,31 @@ async function createRoute(request, env) {
   let osmStatus = 'ok';
   let osmResults = [];
   let playgrounds = [];
+  let osmEndpoints = [];
+  let osmRequests = 0;
+  let osmErrors = {};
   try {
-    const overpass = await fetchOverpass(samples, CORRIDOR_M);
+    const overpass = await fetchOverpass(samples, CORRIDOR_M, {
+      endpoints: endpointList(env.OVERPASS_URL),
+    });
     osmResults = overpass.facilities;
     playgrounds = overpass.playgrounds;
-    if (overpass.chunksOk < overpass.chunksTotal) {
+    osmEndpoints = overpass.endpointsUsed;
+    osmRequests = overpass.requests;
+    osmErrors = overpass.errors;
+    if (!overpass.chunksOk) {
+      // Google-only fallback: facilities still found, but no playground signal.
+      osmStatus = `unavailable: ${String(overpass.lastError || 'no chunks served').slice(0, 120)}`;
+    } else if (overpass.chunksOk < overpass.chunksTotal) {
       // Some of the corridor was covered; say so rather than claiming 'ok'.
       osmStatus = `partial: ${overpass.chunksOk} of ${overpass.chunksTotal} chunks`;
     }
+    console.log(
+      `route "${name}": overpass ${overpass.chunksOk}/${overpass.chunksTotal} chunks in ` +
+        `${overpass.requests} requests; served by ${overpass.endpointsUsed.join(', ') || 'nothing'}; ` +
+        `errors ${JSON.stringify(overpass.errors)}`
+    );
   } catch (err) {
-    // Google-only fallback: facilities still found, but no playground signal.
     osmStatus = `unavailable: ${String(err.message).slice(0, 120)}`;
   }
 
@@ -176,6 +191,9 @@ async function createRoute(request, env) {
         excluded_retail: excludedSummary.effective,
         excluded_retail_raw: excludedSummary.raw,
         excluded_types: excludedSummary.types,
+        osm_endpoints: osmEndpoints,
+        osm_requests: osmRequests,
+        osm_errors: osmErrors,
       },
     },
     201

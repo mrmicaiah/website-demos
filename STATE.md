@@ -41,14 +41,15 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   (`websiteUri`, Enterprise SKU, full mask only) and from OSM
   `website`/`contact:website`. A missing website renders a low-weight badge and
   has its own filter entry: it is a prospecting signal she wants, not a gap.
-- **Overpass corridor chunking** — the corridor is queried in small chunks with
-  retries and cross-chunk dedupe. It did not fix the gatlingburg 521 (see below),
-  but it is the right shape and the subrequest budget is now asserted by a test.
+- **Overpass corridor chunking and endpoint fallback** — small chunks, retries,
+  cross-chunk dedupe, `OVERPASS_URL` configurable with mirror fallback, and a
+  counter-enforced subrequest cap. The mirrors turned out to be unusable, but
+  gatlingburg went from zero OSM data to partial coverage (see below).
 - **Playground signals** — `playground_nearby` from OSM `leisure=playground`
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **65 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
+- **69 tests passing** — `cd demos/route-caller/api && node test/geo.test.mjs`.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 ### Live data — three routes
@@ -56,7 +57,7 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
 | route | id | rows | school | no-play | playground | no website | visible | calls |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Decatur to Huntsville Test | `db187c9d` | 72 | 4 | 0 | 10 | 19 | 57 | none |
-| here to gatlingburg | `52ce7dc1` | 243 | 31 | 2 | 0 | 50 | 210 | none |
+| here to gatlingburg | `9d25fac3` | 255 | 31 | 2 | **10** | 57 | 222 | none |
 | Connecticut to Rhode Island | `b18c249a` | 213 | 10 | 5 | 0 | — | 198 | **1 call** |
 
 - **Decatur to Huntsville Test** and **here to gatlingburg** were re-ingested
@@ -87,47 +88,65 @@ route's existing rows and `UPDATE`s only the enrichment columns (`website`,
 `notes`, or row identity. That is the general answer to "this route has call
 activity but stale enrichment", which will keep recurring as the schema grows.
 
-#### Overpass, gatlingburg, and what is actually wrong
+#### Overpass: mirrors don't work, the main endpoint is intermittent
 
-**gatlingburg has no OSM data and no playground data.** `playground_nearby` is 0
-for all 243 rows, which means *not checked*, never "no playgrounds". The UI is
-right to render nothing rather than a negative badge.
+The corridor query is **chunked** (`CHUNK_SIZE = 4` sample points per query,
+sequential, 1 s apart, deduped across chunks by OSM element id) and the endpoint
+is configurable via **`OVERPASS_URL`** in `wrangler.toml` `[vars]`, with an
+ordered fallback through two mirrors.
 
-The corridor query is now **chunked** (`CHUNK_SIZE = 4` sample points per query,
-sequential, 1 s apart, one retry each, results deduped across chunks by OSM
-element id). Chunking did not fix gatlingburg, but the investigation ruled out
-the two obvious explanations:
+**The mirror fix did not work.** Both mirrors return **HTTP 500** consistently,
+for the same queries the main endpoint serves:
 
-- **Overpass is not down.** The exact queries the Worker sends succeed from a
-  laptop against the same endpoint.
-- **It is not simply query size**, though size matters a lot. Measured on the
-  gatlingburg corridor with all four tag clauses: 9 anchor points takes 42 s,
-  4 points takes 4.6 s, 2 points takes 1.9 s. Cost is superlinear in anchor
-  points. Chunk size was dropped from 9 to 4 on that evidence — and 4-point
-  chunks still came back 521 from the Worker.
+```
+overpass-api.de          HTTP 521 (intermittent — serves some chunks)
+overpass.kumi.systems    HTTP 500 (never served a chunk)
+overpass.private.coffee  HTTP 500 (never served a chunk)
+```
 
-So the failure is **specific to the Worker → overpass-api.de path**, not to the
-query and not to the service. 521 is a Cloudflare edge error meaning the origin
-refused or dropped the connection. The leading hypothesis is that Overpass
-treats Cloudflare Workers egress differently (shared IPs, rate limiting, or an
-outright block); the Decatur route succeeding earlier the same day means it is
-not a permanent blanket block.
+What did improve is the main endpoint. It is **intermittent rather than
+blocked** from Worker egress: it serves one or two of seven chunks and 521s the
+rest. gatlingburg now gets real OSM data where it previously got none —
+255 facilities (up from 243), 15 OSM-derived rows, and **10 playgrounds mapped**
+(up from 0). `osm_status` reads `partial: N of 7 chunks`, which is the honest
+description.
 
-**Next thing to try, not yet tried: a mirror endpoint** — `overpass.kumi.systems`
-or `overpass.private.coffee` — behind an env var so it can be switched without a
-deploy. If a mirror works from the Worker, that confirms the hypothesis and fixes
-every long route at once.
+Two behaviours were tuned from observation and are worth not undoing:
+
+- **An endpoint that has already served a chunk is never retired.** Retiring the
+  primary the first time it 521d was actively losing coverage — the mirrors it
+  fell through to can't serve anything.
+- **500 counts as a broken path**, so the mirrors are retired after one failure
+  each rather than burning two subrequests per chunk.
+
+**Next option, deliberately not built: route Overpass calls through a
+non-Cloudflare proxy.** The evidence points at something in the Cloudflare
+Workers → Overpass path rather than at query size (small chunks fail too) or at
+the service (identical queries succeed from a laptop). A small proxy on
+non-Cloudflare infrastructure would test that directly and, if it works, fix
+every long route. Nobody has built it and it should not be built on spec.
+
+Connecticut still shows `unavailable: Overpass HTTP 521` from its original
+ingest and cannot be refreshed without a re-ingest, which is forbidden — see the
+enrichment gap above.
 
 #### Subrequest budget
 
-Workers cap subrequests per request (50 on the free plan). A 25-sample route now
-spends: 2 geocode + 1 routing + 25 Places nearby + 1 Places text = **29 Google**,
-plus **7 Overpass chunks** = 36 typical, or 43 if every chunk retries. Under the
-cap but no longer roomy. Two things would break it — raising `MAX_SAMPLES` in
-`index.js`, or the Places lean-mask retry firing (it doubles the 25 nearby calls
-if this account ever loses the Enterprise SKU). Lower `MAX_SAMPLES` first if
-either happens. Wall time for a long route is now 40-60 s; the loading state
-covers it, but it is worth knowing before raising the chunk count again.
+Workers cap subrequests per request (50 on the free plan). A 25-sample route
+spends **29 Google** calls (2 geocode + 1 routing + 25 Places nearby + 1 Places
+text) and **7 Overpass chunks** = 36 typical.
+
+Mirror failover makes the worst case awkward to reason about, so it is no longer
+reasoned about: **`MAX_OVERPASS_REQUESTS = 20`** caps Overpass calls per route
+with a counter, giving a hard ceiling of 29 + 20 = **49**, one under the limit.
+A test asserts that ceiling stays under 50, so raising `MAX_SAMPLES` fails
+loudly rather than silently truncating a route.
+
+On gatlingburg the cap is genuinely reached — 20 requests for 7 chunks, because
+the primary keeps failing and getting retried. There is no headroom to raise it;
+the fix is a working endpoint, not a bigger budget.
+
+Wall time for a long route is now 40–60 s. The loading state covers it.
 
 ## In flight
 
