@@ -14,6 +14,7 @@ import {
   byDriveOrder,
   partitionRetail,
   isRetailNonChildcare,
+  summarizeExcluded,
 } from '../src/pipeline.js';
 import { isFranchise, isHomeDaycare, normalizeName } from '../src/heuristics.js';
 
@@ -277,6 +278,75 @@ check('partitionRetail splits the list and reports what it dropped', () => {
   assert(excluded.length === 2, `expected 2 excluded, got ${excluded.length}`);
   assert(excluded.map((r) => r.name).join(',') === 'Target,Publix', 'the right rows dropped');
   assert(!kept.some((r) => r.primaryType === 'department_store'), 'no retail survived');
+});
+
+console.log('exclusion metrics');
+check('effective counts distinct in-corridor rows, raw counts candidates', () => {
+  // One store returned by three overlapping sample-point searches, a second
+  // store found once, and a third that sits outside the 16 km corridor.
+  const excluded = [
+    { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Target', primaryType: 'department_store', lat: 39.2001, lng: -77.0, source: 'google', tags: {} },
+    { name: 'Roses Discount Store', primaryType: 'discount_store', lat: 39.6, lng: -77.01, source: 'google', tags: {} },
+    { name: 'Faraway Mall', primaryType: 'shopping_mall', lat: 39.5, lng: -75.0, source: 'google', tags: {} },
+  ];
+  const summary = summarizeExcluded(excluded, index, 16000);
+  assert(summary.raw === 5, `raw should count every candidate, got ${summary.raw}`);
+  assert(summary.effective === 2, `effective should be 2 (Target + Roses), got ${summary.effective}`);
+  assert(summary.effective < summary.raw, 'effective must not overstate the raw count');
+});
+check('the type breakdown counts raw candidates, not deduped rows', () => {
+  const { types } = summarizeExcluded(
+    [
+      { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, tags: {} },
+      { name: 'Target', primaryType: 'department_store', lat: 39.2, lng: -77.0, tags: {} },
+      { name: 'Publix', primaryType: 'grocery_store', lat: 39.3, lng: -77.0, tags: {} },
+    ],
+    index,
+    16000
+  );
+  assert(types.department_store === 2, `got ${JSON.stringify(types)}`);
+  assert(types.grocery_store === 1, `got ${JSON.stringify(types)}`);
+});
+check('a candidate with no primaryType is bucketed as unknown, never dropped from the tally', () => {
+  const { types, raw } = summarizeExcluded(
+    [{ name: 'Mystery', lat: 39.2, lng: -77.0, tags: {} }],
+    index,
+    16000
+  );
+  assert(raw === 1 && types.unknown === 1, `got ${JSON.stringify(types)}`);
+});
+check('nothing excluded reports zeroes, not undefined', () => {
+  const summary = summarizeExcluded([], index, 16000);
+  assert(summary.raw === 0 && summary.effective === 0, 'both counts zero');
+  assert(Object.keys(summary.types).length === 0, 'empty breakdown');
+});
+
+console.log('primary_type');
+check('primaryType survives placement onto the route', () => {
+  const placed = placeOnRoute(
+    [
+      { name: 'Little Acorns', primaryType: 'child_care_agency', lat: 39.2, lng: -77.0, source: 'google', tags: {} },
+      { name: 'Ardent Preschool', lat: 39.3, lng: -77.0, source: 'osm', tags: {} },
+    ],
+    index,
+    16000
+  );
+  assert(placed.find((f) => f.source === 'google').primaryType === 'child_care_agency');
+  assert(placed.find((f) => f.source === 'osm').primaryType === null, 'OSM rows carry null, not undefined');
+});
+check('a merged row keeps the Google type when OSM contributed the base record', () => {
+  const merged = mergeCandidates([
+    [{ name: 'O2B Kids Madison', lat: 39.2, lng: -77.0, phone: null, source: 'osm', tags: {} }],
+    [{ name: 'O2B Kids Madison', lat: 39.2005, lng: -77.0, phone: '(256) 449-8558', primaryType: 'child_care_agency', source: 'google', tags: {} }],
+  ]);
+  assert(merged.length === 1, 'the two records merged');
+  assert(merged[0].source === 'both', 'source recorded as both');
+  assert(
+    merged[0].primaryType === 'child_care_agency',
+    `type should survive the merge, got ${merged[0].primaryType}`
+  );
 });
 
 console.log('heuristics');

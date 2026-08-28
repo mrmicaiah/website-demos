@@ -12,7 +12,7 @@ demos/route-caller/
   index.html  styles.css  app.js  config.js   ← static frontend (GitHub Pages)
   api/                                        ← Cloudflare Worker + D1
     src/{index,geo,google,overpass,pipeline,heuristics}.js
-    migrations/0001_init.sql
+    migrations/0001_init.sql  0002_add_primary_type.sql
     test/geo.test.mjs
 ```
 
@@ -51,7 +51,7 @@ Base URL is the deployed Worker. CORS is open for GET/POST/PATCH.
 
 | Method | Path | Body / notes |
 | --- | --- | --- |
-| `POST` | `/api/routes` | `{ name, start_address, end_address }` → runs the pipeline, returns `{ route, facilities }` |
+| `POST` | `/api/routes` | `{ name, start_address, end_address }` → runs the pipeline, returns `{ route, facilities, meta }` |
 | `GET` | `/api/routes` | routes with `facility_count`, `called_count`, `flagged_count` |
 | `GET` | `/api/routes/:id` | route + facilities in drive order |
 | `PATCH` | `/api/facilities/:id` | any of `{ status, flagged, notes }` → updated row |
@@ -59,6 +59,35 @@ Base URL is the deployed Worker. CORS is open for GET/POST/PATCH.
 
 `status` is one of `not_called`, `no_answer`, `voicemail`, `interested`,
 `not_interested`.
+
+`POST` also returns a `meta` block describing what the retail deny-list removed:
+
+```json
+"meta": {
+  "excluded_retail": 6,
+  "excluded_retail_raw": 20,
+  "excluded_types": { "department_store": 14, "clothing_store": 3, "discount_store": 3 }
+}
+```
+
+`excluded_retail` is the number of entries actually kept off the call list —
+excluded candidates run through the same dedupe and corridor filter as the kept
+ones. `excluded_retail_raw` is the candidate count behind it, which is larger
+because overlapping corridor searches return the same store several times. The
+Worker also logs the excluded names and types, visible in `wrangler tail`.
+
+### The retail deny-list
+
+Google occasionally types a big-box store as a child care result. Those rows are
+dropped at ingest on `primaryType` alone — **never on the name** — and only for
+unambiguous retail and commerce types. Churches, places of worship, community
+centres, gyms and YMCAs, and schools are never excluded, because real child care
+programs run inside all of them. A row with no `primaryType` (every OSM
+candidate) is kept: the filter fails open.
+
+Google's `primaryType` is stored on each facility as `primary_type`, so the
+filter's decisions stay inspectable. Rows ingested before migration 0002 have
+`NULL` there.
 
 ## Setup
 
@@ -122,7 +151,7 @@ static server (`npx serve demos/route-caller`).
 cd demos/route-caller/api && node test/geo.test.mjs
 ```
 
-22 checks over the corridor math and merge logic: polyline decoding against
+36 checks over the corridor math and merge logic: polyline decoding against
 Google's reference string, haversine distances against known values,
 perpendicular distance to a route, projection along it (including L-shaped
 routes and points that clamp past either end), route simplification, sampling,

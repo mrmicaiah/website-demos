@@ -100,6 +100,7 @@ function absorb(target, incoming) {
   target.address = target.address || incoming.address;
   target.city = target.city || incoming.city;
   target.zip = target.zip || incoming.zip;
+  target.primaryType = target.primaryType || incoming.primaryType || null;
   target.tags = { ...(incoming.tags || {}), ...(target.tags || {}) };
   if (target.source !== incoming.source) target.source = 'both';
 }
@@ -115,6 +116,7 @@ export function placeOnRoute(facilities, routeIndex, maxDistanceMeters = 16000) 
     if (distanceMeters > maxDistanceMeters) continue;
     placed.push({
       ...f,
+      primaryType: f.primaryType || null,
       distance_from_route_m: Math.round(distanceMeters),
       position_along_route_m: Math.round(positionMeters),
       is_franchise: isFranchise(f.name) ? 1 : 0,
@@ -136,4 +138,27 @@ export function byDriveOrder(a, b) {
     (a.distance_from_route_m || 0) - (b.distance_from_route_m || 0) ||
     String(a.name || '').localeCompare(String(b.name || ''))
   );
+}
+
+/**
+ * Describe what the retail deny-list removed, in both the honest senses:
+ *
+ * - `raw` counts candidates as Google returned them, so one store found by five
+ *   overlapping sample-point searches counts five times.
+ * - `effective` runs the excluded rows through the same dedupe and corridor
+ *   filter the kept rows go through, so it is the number of entries the caller
+ *   would actually have seen on the list. This is the number that matters.
+ */
+export function summarizeExcluded(excluded, routeIndex, maxDistanceMeters = 16000) {
+  const types = {};
+  for (const row of excluded) {
+    const key = row.primaryType || 'unknown';
+    types[key] = (types[key] || 0) + 1;
+  }
+  const effective = placeOnRoute(
+    mergeCandidates([excluded]),
+    routeIndex,
+    maxDistanceMeters
+  ).length;
+  return { raw: excluded.length, effective, types };
 }

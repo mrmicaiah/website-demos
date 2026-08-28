@@ -8,7 +8,12 @@
 import { decodePolyline, simplifyByDistance, buildRouteIndex, samplePointsAlong } from './geo.js';
 import { ApiError, geocode, computeRoute, searchNearby, searchAlongRoute } from './google.js';
 import { fetchOverpass } from './overpass.js';
-import { mergeCandidates, placeOnRoute, partitionRetail } from './pipeline.js';
+import {
+  mergeCandidates,
+  placeOnRoute,
+  partitionRetail,
+  summarizeExcluded,
+} from './pipeline.js';
 
 const CORRIDOR_M = 16000; // 10 miles
 const SAMPLE_INTERVAL_M = 8000;
@@ -104,13 +109,11 @@ async function createRoute(request, env) {
   // Drop big-box retail Google mistyped as child care, before the merge so an OSM
   // row can't resurrect one. OSM candidates carry no primaryType and pass through.
   const { kept, excluded } = partitionRetail(googleLists.flat());
-  const excludedTypes = {};
-  for (const row of excluded) {
-    excludedTypes[row.primaryType] = (excludedTypes[row.primaryType] || 0) + 1;
-  }
+  const excludedSummary = summarizeExcluded(excluded, routeIndex, CORRIDOR_M);
   if (excluded.length) {
     console.log(
-      `route "${name}": excluded ${excluded.length} retail result(s):`,
+      `route "${name}": excluded ${excludedSummary.effective} facilit(ies) ` +
+        `from ${excludedSummary.raw} retail result(s):`,
       excluded.map((r) => `${r.name} (${r.primaryType})`).join(', ')
     );
   }
@@ -134,11 +137,12 @@ async function createRoute(request, env) {
     statements.push(
       env.DB.prepare(
         `INSERT INTO facilities
-           (id, route_id, name, address, city, zip, phone, lat, lng, source,
+           (id, route_id, name, address, city, zip, phone, lat, lng, source, primary_type,
             distance_from_route_m, position_along_route_m, is_franchise, is_home_daycare)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         f.id, routeId, f.name, f.address, f.city, f.zip, f.phone, f.lat, f.lng, f.source,
+        f.primaryType || null,
         f.distance_from_route_m, f.position_along_route_m, f.is_franchise, f.is_home_daycare
       )
     );
@@ -153,7 +157,13 @@ async function createRoute(request, env) {
     {
       route,
       facilities: await selectFacilities(env, routeId),
-      meta: { excluded_retail: excluded.length, excluded_types: excludedTypes },
+      meta: {
+        // Entries actually kept off the call list, and the raw candidate count
+        // behind it — one store can be returned by several corridor searches.
+        excluded_retail: excludedSummary.effective,
+        excluded_retail_raw: excludedSummary.raw,
+        excluded_types: excludedSummary.types,
+      },
     },
     201
   );
