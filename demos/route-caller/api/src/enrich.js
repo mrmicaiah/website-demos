@@ -9,6 +9,7 @@
 // Everything here is a pure function so the safety rules can be tested directly.
 
 import { haversineMeters } from './geo.js';
+import { makePatchAssertion, snapshotOf, verifySnapshot } from './shared/snapshot.js';
 import { normalizeName, isFranchise, isHomeDaycare, isSchoolProgram, isPlaygroundUnlikely } from './heuristics.js';
 
 const MATCH_RADIUS_M = 150;
@@ -134,51 +135,14 @@ export const PROTECTED_COLUMNS = new Set([
   'lng',
 ]);
 
-export function assertPatchIsSafe(patch) {
-  for (const column of Object.keys(patch)) {
-    if (PROTECTED_COLUMNS.has(column)) {
-      throw new Error(`enrichment tried to write protected column "${column}"`);
-    }
-  }
-  return true;
-}
-
-/** The fields whose survival we verify after every enrichment run. */
-export function snapshotOf(rows) {
-  return rows.map((r) => ({
-    id: r.id,
-    status: r.status,
-    flagged: r.flagged ? 1 : 0,
-    notes: r.notes || '',
-    phone: r.phone || null,
-  }));
-}
+export const assertPatchIsSafe = makePatchAssertion(PROTECTED_COLUMNS);
 
 /**
- * Compare the before and after snapshots. Everything must be identical, except
- * that a NULL phone is allowed to have gained a value. Runs in production on
- * every enrichment, not only in tests — the whole point is that this executes
- * against a route she is working.
+ * The snapshot rails themselves live in shared/snapshot.js — the area pipeline
+ * runs the same code, not a copy of it. Re-exported here so `enrich.js` stays
+ * the one place a reader has to look for route enrichment safety.
+ *
+ * `verifySnapshot` runs in production on every enrichment, not only in tests:
+ * the whole point is that it executes against a route she is working.
  */
-export function verifySnapshot(before, after) {
-  const violations = [];
-  const afterById = new Map(after.map((r) => [r.id, r]));
-
-  for (const was of before) {
-    const now = afterById.get(was.id);
-    if (!now) {
-      violations.push({ id: was.id, field: 'row', was: 'present', now: 'missing' });
-      continue;
-    }
-    for (const field of ['status', 'flagged', 'notes']) {
-      if (was[field] !== now[field]) {
-        violations.push({ id: was.id, field, was: was[field], now: now[field] });
-      }
-    }
-    if (was.phone !== now.phone && was.phone !== null) {
-      violations.push({ id: was.id, field: 'phone', was: was.phone, now: now.phone });
-    }
-  }
-
-  return { ok: violations.length === 0, violations };
-}
+export { snapshotOf, verifySnapshot };

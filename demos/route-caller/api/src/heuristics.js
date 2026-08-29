@@ -2,6 +2,8 @@
 // data is never discarded. Phase 2 replaces the home-daycare guess with
 // authoritative state licensing data.
 
+import { normalizeName, makeListMatcher } from './shared/names.js';
+
 const FRANCHISES = [
   'kindercare',
   'goddard school',
@@ -27,21 +29,12 @@ const HOME_PATTERNS = [
   /'s family/i,
 ];
 
-/** Loose normalization used for dedupe: lowercase, drop noise words + punctuation. */
-export function normalizeName(name) {
-  return (name || '')
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9 ]+/g, ' ')
-    .replace(/\b(the|inc|llc|ltd|co|corp|company)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+/** Loose normalization used for dedupe: lowercase, drop noise words + punctuation.
+    Lives in shared/names.js now that the area pipeline dedupes on the same key;
+    re-exported here so every existing importer is unchanged. */
+export { normalizeName };
 
-export function isFranchise(name) {
-  const n = normalizeName(name);
-  return FRANCHISES.some((f) => n.includes(normalizeName(f)));
-}
+export const isFranchise = makeListMatcher(FRANCHISES);
 
 export function isHomeDaycare(name, tags = {}) {
   if (HOME_PATTERNS.some((re) => re.test(name || ''))) return true;

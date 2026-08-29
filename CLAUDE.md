@@ -8,9 +8,14 @@ A showcase repository of self-contained static demo websites, served via GitHub 
 
 ## Current focus
 
-route-caller phase 1 is complete and live — static frontend on Pages, Cloudflare
-Worker + D1 backend deployed, seed route in place — awaiting the caller's first
-real session, whose feedback decides phase 2 versus corridor tuning.
+Two live products share ONE Cloudflare Worker and ONE D1 database, both in
+`demos/route-caller/api/`. Do not create a second Worker or a second D1.
+
+- **route-caller** — phase 1 complete and live, awaiting the caller's first real
+  session, whose feedback decides phase 2 versus corridor tuning.
+- **area-caller** — phase 1 complete and live as of 2026-08-29, with the
+  Huntsville pilot loaded (259 businesses, 97 with no website), awaiting her
+  reaction to that list.
 
 ## Session handoff
 

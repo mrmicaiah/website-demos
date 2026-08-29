@@ -2,15 +2,13 @@
 // checks can exercise it directly.
 
 import { haversineMeters, nearestOnRoute } from './geo.js';
+import { dedupeCandidates, DEDUPE_RADIUS_M } from './shared/dedupe.js';
 import {
-  normalizeName,
   isFranchise,
   isHomeDaycare,
   isSchoolProgram,
   isPlaygroundUnlikely,
 } from './heuristics.js';
-
-const DEDUPE_RADIUS_M = 150;
 
 /**
  * Google occasionally types a big-box store as a child care result (a Target came
@@ -72,28 +70,11 @@ export function partitionRetail(candidates) {
  * number wins; `source` becomes 'both' when Google and OSM agree on a place.
  */
 export function mergeCandidates(lists) {
-  const merged = [];
-  const byName = new Map();
-
-  for (const candidate of lists.flat()) {
-    if (!candidate || candidate.lat == null || candidate.lng == null || !candidate.name) {
-      continue;
-    }
-    const key = normalizeName(candidate.name);
-    const bucket = byName.get(key) || [];
-    const twin = bucket.find(
-      (existing) => haversineMeters(existing, candidate) <= DEDUPE_RADIUS_M
-    );
-    if (twin) {
-      absorb(twin, candidate);
-    } else {
-      const record = { ...candidate };
-      bucket.push(record);
-      byName.set(key, bucket);
-      merged.push(record);
-    }
-  }
-  return merged;
+  // The engine lives in shared/dedupe.js; what is route-specific is only how a
+  // duplicate is absorbed. No stable key is passed: these candidates come from
+  // Google AND OpenStreetMap, and an OSM row has no place id to key on, so
+  // name-within-150m stays the whole rule here.
+  return dedupeCandidates(lists, { radiusMeters: DEDUPE_RADIUS_M, absorb });
 }
 
 function absorb(target, incoming) {

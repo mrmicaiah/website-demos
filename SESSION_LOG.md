@@ -5,6 +5,145 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-29 — area-caller: a second product on the same Worker
+
+Vertizin needed an outbound acquisition list: local service trades around a
+town, not child care along a drive. It shipped end to end today — schema,
+endpoints, frontend, gallery entry, and a live Huntsville pilot.
+
+### The structure decision, which was made against the spec
+
+`prompts/area-caller-spec.md` left the backend shape to the builder and offered
+a new Worker or a new D1, on the reasoning that **route-caller's live tables
+must not move — she is calling from them**. The manager overruled it before work
+started: **one D1, one Worker, two frontends.**
+
+That is the right call and worth recording why. The constraint is real, but
+separation is not the only way to meet it, and it is the expensive way. A second
+Worker would need its own copy of the Google secret, its own deploy and version
+history, and its own copy of the tiling, dedupe and snapshot logic — which is
+precisely the code that took the most measurement to get right and that both
+pipelines most need to keep in step. The spec even anticipated the fork,
+suggesting copies "with a header comment naming the source file".
+
+Additivity meets the same constraint more strongly: migration `0007` touches no
+existing table, no area endpoint reads or writes `routes` or `facilities`, and
+**the 126 pre-existing tests pass byte-for-byte unchanged**. That is a guarantee
+that is re-checked on every run, rather than assumed from directory layout.
+
+So four modules moved into `src/shared/` and both pipelines now use them:
+`tiling.js` (the 16.1 km search circle and the doctrine that a wide radius is
+not wide coverage), `dedupe.js` (the merge engine, with the absorb rule left to
+the caller because the route list needs the phone-bearing record to win and the
+area list needs the union of industries), `names.js`, and `snapshot.js` (the
+enrichment rails). Route behaviour did not move with them; the suite is the
+proof.
+
+### Two bugs the pilot found that a test could not have
+
+**`hvac_contractor` does not exist in Places (New).** The spec said to verify
+type names before hardcoding, and the honest way to verify them is against the
+live API. So each industry's types are **probed once at the centre** and the
+industry falls back to text search per tile if Places rejects them. A stale type
+name now costs one wasted call instead of an empty area. HVAC has run on text
+from the first pull.
+
+**Places Text Search rejects a circle in `locationRestriction` — only a
+rectangle.** This one is the lesson of the session. The first Huntsville pull
+made 95 calls and returned 496 raw results. Widening HVAC to two phrasings made
+140 calls and returned **exactly 496 raw results**. Every per-tile HVAC search
+was 400ing and being swallowed by a per-tile `catch`, so the whole HVAC column
+was coming from the two area-wide sweeps: 27 companies. With the rectangle, the
+same 140 calls returned 1,370 raw and **142 HVAC companies**.
+
+Nothing about that failure was visible. Same call count, same wall time, no
+error, a list that looked plausible. So `meta.tile_failures` now counts failed
+tile searches, the response reports a sample of the errors, and the UI tells her
+if a pull came back short. **A search that silently returns nothing is worse
+than one that fails loudly** — that is now in `CONTEXT.md`.
+
+The second phrasing turned out to matter as much as the rectangle: half of
+Huntsville's HVAC companies are typed `general_contractor` and named "…Heating
+and Air", and "HVAC contractor" alone does not match them. One phrase is not
+coverage.
+
+### Enrichment shipped in phase 1, and was proven on live call state
+
+The spec allowed deferring it. The shared rails made it cheap enough not to, and
+it earned its place immediately: the pilot area was pulled BEFORE the text-search
+fix, and enrichment is what brought it up to full coverage in place — 106
+businesses inserted, 9 updated, nothing deleted.
+
+It was proven the way the route enrichment was: real call state was planted on
+three rows (`interested`, flagged, "PILOT RAILS TEST — owner Dale, call back
+Tuesday"), enrichment ran across 115 writes, and the three rows were re-read with
+an independent SQL query afterwards. Byte-for-byte identical. Then the test data
+was cleared.
+
+One rule differs from route-caller and it is deliberate: **`rating` and
+`review_count` refresh, where `phone` and `website` still only fill from NULL.**
+Reviews are pure Google facts she never edits, and their staleness is the reason
+to re-check an area at all. A website, by contrast, must not appear under her
+mid-call and turn a lead into a non-lead.
+
+### The judgment calls in the trade classifier
+
+Franchises are matched against an **explicit brand list, never a name pattern**,
+and the deciding evidence is the pair the spec named: "Roto-Rooter" is a national
+franchise and "Rooter Man of Athens LLC" is somebody's independent shop —
+exactly the owner-operated business Vertizin sells to. A `/rooter/` pattern
+cannot tell them apart, and the same trap sits under "one hour", "benjamin
+franklin" and "mr". Both directions are tested with real names.
+
+Suppliers are the one place a shape rule is allowed — `… Plumbing Supply`,
+`… Wholesale`, `… Distributing` — because supply houses announce themselves and
+no residential contractor is named that way. "Ferguson" alone is deliberately
+NOT a needle: "Ferguson & Sons Heating" is a real prospect, so every Ferguson
+entry carries its trading suffix.
+
+### Where the "no website" doctrine inverts
+
+In route-caller a missing website is one prospecting signal among several and
+renders as a muted grey badge. In area-caller it is the whole pitch, so the same
+data renders as a **green flag** — uppercase, bordered, in her market's colour —
+and it is the first term of the sort, its own filter, and the number printed on
+every area card. Same fact, opposite emphasis, because the products sell
+different things.
+
+The lead score is defined in exactly one file, `src/areas/leadScore.js`, which
+exports both the SQL fragment and the JS comparator. A test inserts a
+deliberately awkward set of rows into real SQLite and asserts the database's
+order equals the comparator's, including the case that matters: **a NULL review
+count is not zero.** It means the Enterprise field mask failed, so it sorts to
+the bottom of its group rather than posing as a business nobody has reviewed —
+the same reasoning as `playground_nearby`.
+
+Writing that test also caught a real bug: `AREA_LIST_SQL` is a LEFT JOIN, so an
+area with no businesses still yields one all-NULL row, and `no_website_count`
+counted it. An empty area was reporting one lead.
+
+### Overpass: a considered omission
+
+Not used for areas at all. OSM's `craft=*` coverage in the US is thin, it is the
+least reliable dependency in route-caller, and it accounts for essentially all of
+route-caller's wall time. Skipping it is why an area pull takes **5 s** where a
+route ingest takes 22–32 s.
+
+### The pilot
+
+30 miles around Huntsville, HVAC + Plumbing: **259 businesses, 248 on her list,
+97 with no website.** 140 Places calls, ~$5.40 of Enterprise-tier billing, 5.5
+seconds. The full numbers, the review distribution and the per-area cost math
+are in `STATE.md`.
+
+The finding worth acting on is the *shape* of the no-website group: 58 of the 97
+have under ten reviews. The sort puts the good ones on top — DrainPro Express,
+117 reviews, 5.0, no site — but it thins out after the first ten. Whether that
+matters is her call, not ours, and it should not be pre-empted with a review
+floor before she has worked a town.
+
+---
+
 ## 2026-08-28 — In-place enrichment: the endpoint that runs on live work
 
 The most safety-critical change so far, because its whole purpose is to run

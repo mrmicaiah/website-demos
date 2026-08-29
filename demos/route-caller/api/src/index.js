@@ -1,9 +1,23 @@
-// Route Caller API — Cloudflare Worker + D1.
+// Route Caller + Area Caller API — one Cloudflare Worker, one D1 database.
 //
-// POST   /api/routes         run the pipeline, persist, return route + facilities
-// GET    /api/routes         list routes with progress counts
-// GET    /api/routes/:id     one route + its facilities in drive order
-// PATCH  /api/facilities/:id update status / flagged / notes
+// Route Caller (the child-care call list, live and being called from):
+//   POST   /api/routes              run the pipeline, persist, return route + facilities
+//   GET    /api/routes              list routes with progress counts
+//   GET    /api/routes/:id          one route + its facilities in drive order
+//   POST   /api/routes/:id/enrich   re-check a worked route in place
+//   PATCH  /api/facilities/:id      update status / flagged / notes
+//
+// Area Caller (the trades acquisition list — additive, see src/areas/):
+//   GET    /api/industries          the preset industry menu
+//   POST   /api/areas               geocode + tile + search + classify + persist
+//   GET    /api/areas               list areas with counts
+//   GET    /api/areas/:id           one area + its list in lead-score order
+//   POST   /api/areas/:id/enrich    re-check a worked area in place
+//   PATCH  /api/area-facilities/:id update status / flagged / notes
+//
+// The two products share this Worker, this database, the Google key, and the
+// modules under src/shared/. They share no TABLES: nothing under /api/areas
+// reads or writes `routes` or `facilities`.
 
 import {
   decodePolyline,
@@ -12,6 +26,7 @@ import {
   samplePointsAlong,
   corridorSearchPoints,
 } from './geo.js';
+import { TILE_RADIUS_M } from './shared/tiling.js';
 import { ApiError, geocode, computeRoute, searchNearby, searchAlongRoute } from './google.js';
 import { fetchOverpass, endpointList } from './overpass.js';
 import {
@@ -28,6 +43,14 @@ import {
   snapshotOf,
   verifySnapshot,
 } from './enrich.js';
+import {
+  createArea,
+  listAreas,
+  getArea,
+  enrichArea,
+  listIndustries,
+  patchAreaFacility,
+} from './areas/handlers.js';
 
 // Ingest wide, filter narrow. Her decision: store the full 30-mile corridor so
 // widening the view is a UI toggle rather than a re-search. Every facility keeps
@@ -40,7 +63,7 @@ const CORRIDOR_M = 48280; // 30 miles — what we store and filter on
 // corridorSearchPoints in geo.js for the measurement that forced this.
 // Radius doubles as the lateral step, so (2 rings + 1) * radius must cover the
 // corridor: 3 x 16,100 = 48,300 m, just past the 48,280 m we store.
-const SEARCH_RADIUS_M = 16100;
+const SEARCH_RADIUS_M = TILE_RADIUS_M; // 16,100 m — the shared tile, see shared/tiling.js
 const LATERAL_RINGS = 2; // 0, ±16.1 km, ±32.2 km -> outer edge reaches 48.3 km
 const SEARCH_POINTS_PER_SAMPLE = LATERAL_RINGS * 2 + 1;
 // Overpass stays narrow on purpose: at a 48 km radius its chunks take ~8 s each
@@ -89,6 +112,22 @@ export default {
 
       const facMatch = path.match(/^\/api\/facilities\/([\w-]+)$/);
       if (facMatch && method === 'PATCH') return await patchFacility(request, env, facMatch[1]);
+
+      // --- Area Caller. Separate paths, separate tables, same Worker. ---
+      if (path === '/api/industries' && method === 'GET') return listIndustries(json);
+      if (path === '/api/areas' && method === 'POST') return await createArea(request, env, json);
+      if (path === '/api/areas' && method === 'GET') return await listAreas(env, json);
+
+      const areaEnrichMatch = path.match(/^\/api\/areas\/([\w-]+)\/enrich$/);
+      if (areaEnrichMatch && method === 'POST') return await enrichArea(env, areaEnrichMatch[1], json);
+
+      const areaMatch = path.match(/^\/api\/areas\/([\w-]+)$/);
+      if (areaMatch && method === 'GET') return await getArea(env, areaMatch[1], json);
+
+      const areaFacMatch = path.match(/^\/api\/area-facilities\/([\w-]+)$/);
+      if (areaFacMatch && method === 'PATCH') {
+        return await patchAreaFacility(request, env, areaFacMatch[1], json);
+      }
 
       return json({ error: 'Not found' }, 404);
     } catch (err) {

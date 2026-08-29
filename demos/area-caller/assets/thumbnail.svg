@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Area Caller thumbnail">
+  <rect width="640" height="360" fill="#F4F3EF"/>
+
+  <!-- the area: a radius around a town, tiled by overlapping searches -->
+  <circle cx="168" cy="188" r="126" fill="#DCEFE0" opacity="0.55"/>
+  <circle cx="168" cy="188" r="126" fill="none" stroke="#2E5B41" stroke-width="3" stroke-dasharray="7 6"/>
+  <circle cx="118" cy="138" r="42" fill="none" stroke="#2E5B41" stroke-width="1.4" opacity="0.35"/>
+  <circle cx="212" cy="140" r="42" fill="none" stroke="#2E5B41" stroke-width="1.4" opacity="0.35"/>
+  <circle cx="118" cy="232" r="42" fill="none" stroke="#2E5B41" stroke-width="1.4" opacity="0.35"/>
+  <circle cx="212" cy="232" r="42" fill="none" stroke="#2E5B41" stroke-width="1.4" opacity="0.35"/>
+  <circle cx="168" cy="188" r="42" fill="none" stroke="#2E5B41" stroke-width="1.4" opacity="0.35"/>
+  <circle cx="168" cy="188" r="7" fill="#1B3A5C"/>
+
+  <!-- pins: solid green = no website (the lead), pale = has one -->
+  <circle cx="112" cy="150" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="206" cy="128" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="240" cy="216" r="6.5" fill="#7FA98E" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="104" cy="242" r="6.5" fill="#2F7D4F" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="182" cy="268" r="6.5" fill="#7FA98E" stroke="#fff" stroke-width="2.5"/>
+  <circle cx="150" cy="106" r="6.5" fill="#9AA39E" stroke="#fff" stroke-width="2.5"/>
+
+  <!-- header card -->
+  <rect x="330" y="34" width="272" height="104" rx="18" fill="#2E5B41"/>
+  <rect x="348" y="52" width="80" height="24" rx="8" fill="#1B3A5C"/>
+  <text x="388" y="69" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="12" fill="#ffffff">HUNTSVILLE</text>
+  <text x="438" y="70" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="15" fill="#ffffff">Call List</text>
+  <text x="348" y="94" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#CFE3D6">30 mi around Huntsville · Lead score</text>
+  <rect x="348" y="104" width="52" height="20" rx="10" fill="#ffffff"/>
+  <text x="374" y="118" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="11" fill="#2E5B41">All</text>
+  <rect x="406" y="104" width="54" height="20" rx="10" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.3)"/>
+  <text x="433" y="118" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="600" font-size="11" fill="#EAF3ED">HVAC</text>
+  <rect x="466" y="104" width="66" height="20" rx="10" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.3)"/>
+  <text x="499" y="118" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="600" font-size="11" fill="#EAF3ED">Plumbing</text>
+
+  <!-- lead card, no website -->
+  <rect x="330" y="150" width="272" height="80" rx="16" fill="#ffffff" stroke="#E3E2DC"/>
+  <rect x="346" y="166" width="18" height="18" rx="4" fill="#ffffff" stroke="#C9CEC9" stroke-width="2"/>
+  <text x="376" y="180" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="14" fill="#1B2320">Anything Plumbing</text>
+  <text x="556" y="180" text-anchor="end" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="12" fill="#E0A32E">★ <tspan fill="#6C7671">4.9 (68)</tspan></text>
+  <rect x="376" y="190" width="86" height="17" rx="5" fill="#DCEFE0" stroke="#B8DCC2"/>
+  <text x="419" y="202" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="9.5" fill="#1F5335">NO WEBSITE</text>
+  <rect x="376" y="212" width="150" height="6" rx="3" fill="#EFEFEA"/>
+  <rect x="346" y="212" width="18" height="6" rx="3" fill="#EFEFEA"/>
+
+  <!-- call button -->
+  <rect x="330" y="242" width="200" height="42" rx="12" fill="#2F7D4F"/>
+  <text x="430" y="269" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="700" font-size="15" fill="#ffffff">(256) 555-0142</text>
+  <rect x="540" y="242" width="62" height="42" rx="12" fill="#FDF8EA" stroke="#EBD9A4"/>
+  <text x="571" y="270" text-anchor="middle" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="18" fill="#E0A32E">★</text>
+
+  <text x="330" y="312" font-family="-apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="13" fill="#2E5B41">97 with no website</text>
+  <text x="330" y="332" font-family="-apple-system, Helvetica, Arial, sans-serif" font-size="12" fill="#6C7671">248 businesses to call · Huntsville, 30 mi</text>
+</svg>

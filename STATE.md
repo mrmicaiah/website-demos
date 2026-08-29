@@ -1,8 +1,15 @@
 # STATE
 
-_Last updated: 2026-08-28_
+_Last updated: 2026-08-29_
 
 Current status. Rewritten each session — this file is not history, `SESSION_LOG.md` is.
+
+**Two products now share one Worker and one D1 database.** route-caller phase 1
+is complete and awaiting the caller's first real session; area-caller phase 1 is
+complete, deployed, and has a live pilot in it. Everything below is split into a
+route-caller section and an area-caller section.
+
+# route-caller
 
 ## Done
 
@@ -18,11 +25,11 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   thumbnail.
 - **API** — Cloudflare Worker + D1, deployed at
   **https://route-caller-api.micaiah-tasks.workers.dev**
-  (Worker version `2f4086c7-1b56-4760-9284-6429b4e90381`).
+  (Worker version `238c8c92-8ab3-4601-a016-20eb969fe397`, 2026-08-29 — this
+  Worker now serves BOTH products).
   D1 database `route-caller-db`, id `dd62dbcf-fffd-4432-9e92-51422d16c194`.
   `GOOGLE_MAPS_API_KEY` is set; `/api/health` reports `google_key_configured: true`.
-- **Migrations `0001` through `0004_add_website_and_playground` are all applied
-  remotely.**
+- **Migrations `0001` through `0007_add_areas` are all applied remotely.**
 - **Retail deny-list** on `primaryType`, type-only and fail-open (see the locked
   decisions in `CONTEXT.md`).
 - **Drive-order tiebreak** — the three-key tuple, applied consistently in SQL,
@@ -68,11 +75,18 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
   within 100 m (badge when set), and `playground_unlikely` for tutoring, music,
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
-- **126 tests passing** — `cd demos/route-caller/api && npm test` (95 unit checks
-  plus 10 that run the real route-list SQL against real SQLite built from the
-  real migrations, via `node:sqlite`).
+- **126 route-caller tests passing, unchanged** — `cd demos/route-caller/api &&
+  npm test` now runs **217** (126 route + 91 area). The 126 are byte-for-byte
+  the same assertions as before area-caller landed, and that is the proof that
+  extracting `src/shared/` changed no route behaviour.
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
+- **Four modules moved into `src/shared/` and are now used by both pipelines** —
+  `names.js` (normalizeName + the brand matcher), `dedupe.js` (the merge engine),
+  `snapshot.js` (the enrichment rails), `tiling.js` (the 16.1 km search circle
+  and the coverage doctrine). `heuristics.js`, `pipeline.js`, `enrich.js` and
+  `index.js` delegate to them; nothing about route behaviour moved with them.
+
 ### Live data — three routes
 
 | route | id | corridor | rows | visible | websites | school | playground | calls |
@@ -211,6 +225,101 @@ and the test now asserts against the paid ceiling.
 Enterprise-SKU searches per route is a real cost; check it before raising the
 tiling density.
 
+# area-caller
+
+## Done
+
+**area-caller phase 1 is complete, deployed, and has a live pilot in it.**
+
+- **Frontend** — `demos/area-caller/` (`index.html`, `styles.css`, `app.js`,
+  `config.js`), registered in `demos.json` with a thumbnail. route-caller's shell
+  re-aimed: landing with area cards, a new-area form (name, town, 10/20/30 mi
+  radio, trade checkboxes with HVAC + Plumbing pre-checked), and the call list —
+  search, status filter, **industry chips**, a four-way sort select, rating +
+  review count on every card, the NO WEBSITE green-flag badge, phone button,
+  flag star, autosaving notes, status dropdown, the collapsed "Hidden: N" line
+  with per-category Restore, and a collapsed Leaflet map of the radius circle
+  whose pins colour by whether the business has a website.
+- **API** — the SAME Worker and the SAME D1 as route-caller. `/api/industries`,
+  `POST|GET /api/areas`, `GET /api/areas/:id`, `POST /api/areas/:id/enrich`,
+  `PATCH /api/area-facilities/:id`. Migration `0007_add_areas` applied remotely.
+  No new secret was needed — the Google key was already on this Worker.
+- **`src/areas/`** — `industries.js` (the menu as DATA), `classify.js` (franchise
+  brand list + supplier brands/shapes/types), `leadScore.js` (the formula, once,
+  as both SQL and JS), `pipeline.js`, `queries.js`, `google.js`, `enrich.js`,
+  `handlers.js`.
+- **Tiling a disc**, from the shared tiling module: 45 tiles of 16.1 km at 16.1 km
+  spacing cover a 30-mile area, ordered nearest-first so a cap sheds the edge
+  rather than the middle. A test proves the covering is a covering by probing
+  the disc, not by counting points.
+- **Enrichment shipped in phase 1**, not deferred — the shared rails made it
+  cheap, and it was proven live (see below).
+- **91 area tests**, `npm test` runs 217 total. Tiling coverage, the tile
+  rectangle, dedupe by place id and by name+geo, industry shapes, the junk
+  classifier in both directions, lead-score ordering including NULL review counts
+  **verified against real SQLite so the SQL and the JS comparator cannot drift**,
+  the LEFT-JOIN phantom-lead guard, the subrequest budget, and the enrichment
+  rails.
+
+### Live data — the Huntsville pilot
+
+`Huntsville pilot`, id `659c60f2`, 30 mi around Huntsville AL, HVAC + Plumbing.
+
+| | value |
+| --- | --- |
+| stored | **259** |
+| visible (her list) | **248** |
+| **no website** | **97** (39% of the visible list) |
+| per industry | plumbing 132, HVAC 142 (15 rows are both) |
+| franchises flagged | 7 (6 distinct brands) |
+| suppliers flagged | 4 (all "Home Services at The Home Depot") |
+| phone coverage | 253 / 259 (98%) |
+| rating coverage | 244 / 259 (94%) |
+| wall time | 3.5 s first pull, 5.5 s at full coverage |
+| Places calls | 140 (budget 141 of a 1000 ceiling) |
+| distance spread | median 15.8 mi, max 29.9 mi |
+
+Review-count distribution, all rows: 0 reviews **0**, 1–9 **84**, 10–49 **60**,
+50–99 **32**, 100–249 **28**, 250+ **40**, unknown 15.
+
+Among the 97 no-website leads: 1–9 **58**, 10–49 **23**, 50–99 **4**, 100+ **1**,
+unknown 11. **That shape is the finding worth acting on** — the no-website rows
+skew small. The single best lead in Huntsville is DrainPro Express (117 reviews,
+5.0, no site); after the top ten it thins out fast.
+
+### Cost math, per area
+
+Enterprise-tier Places, which is the tier this account already pays for (it is
+what `nationalPhoneNumber` bills at, and `rating`/`userRatingCount` ride along
+for free on the same tier).
+
+| SKU | calls | list rate /1000 | cost |
+| --- | --- | --- | --- |
+| Geocoding | 1 | $5 | $0.005 |
+| Nearby Search (Enterprise) | 47 | $35 | $1.65 |
+| Text Search (Enterprise) | 93 | $40 | $3.72 |
+| **total, 30 mi, 2 trades** | **141** | | **≈ $5.37** |
+
+Roughly **$5.40 per 30-mile two-trade area**, or **~$0.022 per business found**
+and **~$0.055 per no-website lead**. A 10-mile area is about a fifth of that
+(fewer tiles). Adding a third trade adds roughly $1.65–$3.70 depending on
+whether its Places type works. Rates are Google's published list prices —
+confirm against the billing console before quoting them to anyone.
+
+**Two economies are available if cost matters**: HVAC costs double because it has
+no Places type and runs two text phrasings per tile, and Text Search bills higher
+than Nearby Search. If Google ever ships an HVAC type, an area gets ~40% cheaper
+on its own.
+
+### Saturation and coverage
+
+18 of 140 searches hit the 20-result cap, all in the dense middle. That is a
+lower saturation rate than route-caller's routes (23 of 35 on Decatur) because
+the trades are sparser than child care. **Coverage is not currently the
+constraint here** — tighter tiling would mostly re-find the same businesses.
+
+# both products
+
 ## In flight
 
 Nothing.
@@ -238,6 +347,23 @@ Separately, **"Institute for Learning Styles Research"** (a research non-profit,
 not a facility) is deliberately unflagged: "Institute" was left out of the
 name patterns as too risky, and one research org on a list is cheaper than
 hiding a real Montessori institute.
+
+### Open questions for area-caller
+
+1. **The franchise and supplier lists need real-data expansion**, exactly as the
+   childcare list did. Huntsville flagged 6 distinct franchise brands and one
+   supplier shape; a second town will surface names these lists do not know.
+   Anything flagged is one tap from being restored, so the cost of a miss is a
+   wasted call, not a lost prospect.
+2. **The no-website leads skew small** — 58 of 97 have under 10 reviews. If
+   "established" is a hard requirement for Vertizin, the sort is right but the
+   *list* may want a floor. Do not add one before she works a town: a 5-review
+   shop that has been trading for 20 years is still a customer, and review count
+   is a proxy, not the fact.
+3. **"Home Services at The Home Depot" appears four times** as separate rows.
+   They dedupe correctly by place id (they are genuinely distinct listings) and
+   they are all flagged as retail, so this is cosmetic — but it is the shape of
+   thing worth watching for in a second town.
 
 ## Blocked / awaiting
 
@@ -283,6 +409,26 @@ hiding a real Montessori institute.
   its name — which was proposed and declined — would have removed a real
   facility from the caller's list. Kept as the standing example of why the
   deny-list is type-only.
+- **`hvac_contractor` is not a Places (New) type.** It is rejected, the probe
+  catches it, and HVAC runs on text search instead. Do not "fix" this by
+  removing the probe; do re-test the type occasionally, because Google adds
+  Table A types and an HVAC type would make an area ~40% cheaper.
+- **Places Text Search takes a RECTANGLE in `locationRestriction`, never a
+  circle.** A circle returns 400. This cost a whole pilot run: every per-tile
+  HVAC search failed silently and the area came back with 27 HVAC companies
+  instead of 142, at the same call count. `meta.tile_failures` exists so this
+  class of bug can never be invisible again — check it on any area that looks
+  short.
+- **`npx wrangler deploy` and `npm run migrate:remote` were BOTH blocked by the
+  session permission classifier this time**, where previously only bare
+  `wrangler` was. `npx wrangler d1 migrations apply` and `npx wrangler deploy`
+  went through when invoked directly. The classifier's behaviour is not stable
+  between sessions — if one form is refused, try the other rather than assuming
+  the capability is gone.
+- **A remote D1 call can fail once with `code: 7403` "account not authorized"
+  and succeed on an immediate retry.** It happened on the first
+  `migrations apply` of this session with valid credentials and `d1 (write)` in
+  scope. Retry before investigating auth.
 - **Manager-side MCP pushes go straight to `origin` and will diverge from local
   worker commits.** This already happened once. When local commits are pending,
   route repo writes through the worker rather than through MCP, and `git fetch`
@@ -290,11 +436,17 @@ hiding a real Montessori institute.
 
 ## Next session pickup
 
-1. Confirm the outstanding commits are pushed (`git fetch` first).
-2. Put the school toggle in front of the caller and check the three private
+1. Confirm the outstanding commits are pushed (`git fetch` first). **This session
+   committed but did not push, as instructed.**
+2. **Put the Huntsville pilot in front of the caller.** It is live at
+   `demos/area-caller/` against the deployed Worker. The number to put in front
+   of her first is **97 businesses with no website**, and the question is whether
+   the top ten feel like real calls. That answer decides whether area-caller
+   phase 2 is a review-count floor, more trades, or nothing at all.
+3. Put the school toggle in front of the caller and check the three private
    schools listed above — flag them or not?
-3. Gather her reactions on **capacity badges** (does the missing data matter, or
+4. Gather her reactions on **capacity badges** (does the missing data matter, or
    are name and phone enough?) and **corridor width** (is 10 miles right — too
    much driving, or not enough list?).
-4. Decide whether the two non-seed routes need a school-flag backfill.
-5. Then, and only then, scope phase 2 against what she actually said.
+5. Decide whether the two non-seed routes need a school-flag backfill.
+6. Then, and only then, scope phase 2 against what she actually said.

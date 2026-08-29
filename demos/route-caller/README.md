@@ -11,13 +11,21 @@ Phase 1. Single user, no auth.
 demos/route-caller/
   index.html  styles.css  app.js  config.js   ← static frontend (GitHub Pages)
   api/                                        ← Cloudflare Worker + D1
-    src/{index,geo,google,overpass,pipeline,heuristics}.js
-    migrations/0001_init.sql  0002_add_primary_type.sql
-                              0003_add_is_school_program.sql
-                              0004_add_website_and_playground.sql
-                              0005_add_route_corridor.sql
+    src/{index,geo,google,overpass,pipeline,heuristics,queries,enrich}.js
+    src/shared/{tiling,dedupe,names,snapshot}.js   ← used by BOTH pipelines
+    src/areas/…                                    ← the area-caller backend
+    migrations/0001_init.sql … 0007_add_areas.sql
     test/geo.test.mjs  test/queries.test.mjs  test/enrich.test.mjs
+    test/areas.test.mjs
 ```
+
+**This Worker serves two products.** `demos/area-caller/` is a second frontend
+over the same Worker and the same D1, using the `/api/areas` endpoints and the
+`areas` / `area_facilities` tables. It touches nothing here: no route endpoint,
+table or behaviour changes for it, and the 126 route-caller tests are the proof.
+The modules under `src/shared/` are genuinely shared — the tiling doctrine, the
+dedupe engine, name normalization, and the enrichment snapshot rails — so the
+two pipelines cannot drift on the lessons that were expensive to learn.
 
 The frontend never sees an API key. Every Google call is proxied through the
 Worker, where the key lives as the secret `GOOGLE_MAPS_API_KEY`. The map is
@@ -155,7 +163,11 @@ static server (`npx serve demos/route-caller`).
 cd demos/route-caller/api && npm test
 ```
 
-126 checks: 95 over the corridor math and merge logic: polyline decoding against
+**217 checks — 126 route-caller, 91 area-caller.** The 126 are unchanged from
+before area-caller landed, which is how the shared-module extraction is known to
+be behaviour-preserving.
+
+Of the 126: 95 over the corridor math and merge logic: polyline decoding against
 Google's reference string, haversine distances against known values,
 perpendicular distance to a route, projection along it (including L-shaped
 routes and points that clamp past either end), route simplification, sampling,

@@ -13,14 +13,20 @@
   },
   {
     "slug": "faithful-shepherd-b",
-    "name": "The Faithful Shepherd — Concept 2 (Editorial)",
-    "description": "Alternate editorial/lookbook design — banner-led, light theme.",
+    "name": "The Faithful Shepherd \u2014 Concept 2 (Editorial)",
+    "description": "Alternate editorial/lookbook design \u2014 banner-led, light theme.",
     "thumbnail": "./demos/faithful-shepherd-b/assets/thumbnail.svg"
   },
   {
     "slug": "route-caller",
     "name": "Route Caller",
-    "description": "Drive-order call list of child care facilities within 10 miles of a sales route — Leaflet map, Cloudflare Worker + D1 backend.",
+    "description": "Drive-order call list of child care facilities within 10 miles of a sales route \u2014 Leaflet map, Cloudflare Worker + D1 backend.",
     "thumbnail": "./demos/route-caller/assets/thumbnail.svg"
+  },
+  {
+    "slug": "area-caller",
+    "name": "Area Caller",
+    "description": "Outbound acquisition list of local service trades around any town \u2014 no-website leads first, Google review count as the established-business proxy. Shares route-caller's Worker + D1.",
+    "thumbnail": "./demos/area-caller/assets/thumbnail.svg"
   }
 ]

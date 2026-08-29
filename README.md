@@ -29,6 +29,22 @@ correctly under a GitHub Pages subpath.
 Each demo lives in its own folder under `demos/` and is fully self-contained:
 its own HTML, its own CSS, its own assets, relative paths only.
 
+### Two of them are not mockups
+
+`route-caller` and `area-caller` are working sales tools with a live backend.
+They are two frontends over **one** Cloudflare Worker and **one** D1 database,
+which live in `demos/route-caller/api/`:
+
+| demo | what it lists | unit of work |
+| --- | --- | --- |
+| `route-caller` | child care facilities, for a playground-equipment sale | a drive route + corridor |
+| `area-caller` | local service trades, for Vertizin's website package | a town + a radius |
+
+They share the Worker, the Google key (a Worker secret, never in frontend
+code), and the modules under `api/src/shared/` — tiling, dedupe, name
+normalization and the enrichment snapshot rails. They share no tables. See
+`CONTEXT.md` for the doctrine and `demos/*/README.md` for each tool.
+
 ## Preview locally
 
 The gallery loads `demos.json` at runtime via `fetch()`, which browsers block

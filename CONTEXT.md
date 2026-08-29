@@ -12,8 +12,14 @@ served from GitHub Pages, indexed by a data-driven gallery at the repo root
 thumbnail, and links to `./demos/<slug>/`). Adding a demo means adding a folder
 and one entry in `demos.json`.
 
-Most demos are pure static mockups. **The current flagship is `route-caller`,
-and it is not a mockup — it is a working tool with a live backend.**
+Most demos are pure static mockups. **Two of them are not: `route-caller` and
+`area-caller` are working sales tools with a live backend.**
+
+They are **two frontends over ONE Cloudflare Worker and ONE D1 database**, both
+living in `demos/route-caller/api/`. They share the Worker, the Google key, and
+the modules under `api/src/shared/`. They share no tables. That structure was a
+deliberate decision on 2026-08-29 — see "One Worker, one database, two
+frontends" under the locked decisions.
 
 ### route-caller
 
@@ -30,6 +36,27 @@ Phase 1 is single-user with no auth. Phase 2 is state licensing enrichment
 (authoritative `capacity`, `license_no`, `is_home_daycare`); the schema already
 has those columns and the UI already renders them when non-null.
 
+### area-caller
+
+**Vertizin's outbound acquisition engine.** Same caller-side workflow, different
+unit of work and a different market: instead of a driving route, the unit is an
+AREA — a town plus a radius. Instead of child care, the targets are local
+service trades (HVAC and plumbing first). She pulls a list for a town, works the
+calls, debriefs, and pulls the next town; moving towns must be a thirty-second
+act.
+
+- Frontend: `demos/area-caller/` — vanilla JS, no build step, on GitHub Pages.
+- Backend: the `/api/areas` endpoints of the same Worker, in
+  `demos/route-caller/api/src/areas/`.
+
+**The business it serves, which settles most judgment calls here:** Vertizin
+sells one $1,497/mo website package to established local service businesses,
+2–15 employees, with real job volume. Explicitly not to startups with no
+history and not to price shoppers. The ideal first call is a long-established
+trade business with a strong Google review presence and a weak or missing
+website. When a rule is ambiguous here, ask who could actually justify $1,497 a
+month — the way route-caller asks who could actually buy a playground.
+
 ## The people
 
 - **Micaiah** owns the repository and is the only person who pushes to `origin`.
@@ -38,7 +65,9 @@ has those columns and the UI already renders them when non-null.
   works from an existing call-list artifact, **and its UI is the design
   reference** — route-caller was built to match what she is already fluent in,
   not to improve on it. When a design question comes up, "what does her
-  reference do" outranks taste.
+  reference do" outranks taste. **area-caller reuses that shell deliberately** —
+  same header card, same card anatomy, same one-thumb operation — so moving
+  between the two products costs her nothing.
 - **What she sells: playground equipment, to child care facilities.** This is the
   fact that settles most judgment calls, so reason from it rather than from
   "child care" in the abstract. It is why a facility with no outdoor space is a
@@ -67,6 +96,31 @@ has those columns and the UI already renders them when non-null.
 
 These were decided deliberately. Each has cost something to get right. Change
 them only with a reason better than the one recorded here.
+
+Doctrine that applies to **both** products is marked **[shared]**. Where it is
+shared, it is shared in CODE too — `api/src/shared/` — not copied.
+
+**One Worker, one database, two frontends** *(2026-08-29)*
+
+- The area-caller spec left the backend shape to the builder and offered a new
+  Worker or a new D1. It was **overruled deliberately**: one D1, one Worker, two
+  frontends. `areas` and `area_facilities` are migration `0007` in
+  route-caller's existing chain, and the `/api/areas` endpoints live in the same
+  Worker.
+- The reason is that the alternative buys nothing and costs a fork. A second
+  Worker would need its own copy of the Google secret, its own deploy, its own
+  version history, and — worst — its own copy of the tiling, dedupe and
+  snapshot logic, which is exactly the code that has been most expensive to get
+  right and that both pipelines most need to keep in step.
+- The constraint that motivated the split proposal — *route-caller's live tables
+  must not move* — is met by additivity instead: the area endpoints read and
+  write only `areas` and `area_facilities`, migration `0007` touches no existing
+  table, and **the whole pre-existing test suite passes unchanged** as the proof.
+  That is a stronger guarantee than separation, because it is checked on every
+  run rather than assumed.
+- **Shared means shared, not copied.** `src/shared/tiling.js`,
+  `dedupe.js`, `names.js` and `snapshot.js` are used by both pipelines. If you
+  find yourself about to copy one with a "source: …" header comment, don't.
 
 **Secrets and keys**
 
@@ -104,7 +158,7 @@ them only with a reason better than the one recorded here.
   open/closed) plus a replay queue for `PATCH`es that failed while offline.
   Never call data.
 
-**Enrich, never re-ingest, once a route has been worked**
+**Enrich, never re-ingest, once a list has been worked [shared]**
 
 - **A route with call activity is never re-ingested.** Re-ingesting deletes and
   rebuilds its rows, which destroys her status, flags and notes. Instead,
@@ -118,7 +172,8 @@ them only with a reason better than the one recorded here.
   dialling it right now. `playground_nearby` only ever goes 0 → 1, because
   Overpass is often partial and a missing playground is not evidence of none.
 - **Every run snapshots her columns before writing and verifies them after**,
-  in production, not only in tests. A failed verification is reported loudly in
+  in production, not only in tests. The rails themselves live in
+  `src/shared/snapshot.js` and `POST /api/areas/:id/enrich` runs the same code. A failed verification is reported loudly in
   the response and logged as an error.
 - **Ambiguous matches update nothing.** When an incoming result matches two
   stored rows, guessing would write one facility's data onto another's row on a
@@ -130,25 +185,27 @@ them only with a reason better than the one recorded here.
   call: widening the view must never require re-searching a route. Every
   facility stores its true `distance_from_route_m`, and the header's distance
   lens (30 mi default / 20 / 10) filters on that client-side, instantly.
-- **A wide corridor is not a wide search radius.** One Places nearby search
+- **A wide corridor is not a wide search radius. [shared]** One Places nearby search
   returns at most 20 results, so a 30-mile radius in a dense area returns the
   nearest 20 and never reaches the edge — measured, it collapsed a route's whole
   result set inside 4.2 miles, worse than the 10-mile corridor it replaced. The
   corridor is therefore **tiled**: each along-route sample gets search points
   offset perpendicular at ±1 and ±2 lateral steps, each searched at a 16.1 km
   radius, so the circles overlap and the outer ring reaches 30 miles. If you
-  ever widen the corridor again, widen the tiling, not the radius.
+  ever widen the corridor again, widen the tiling, not the radius. area-caller
+  tiles a DISC rather than a corridor, with the same 16.1 km circle at the same
+  spacing, from the same file.
 - **`routes.corridor_m` records what a route was actually ingested at**, and the
   UI disables lens options beyond it. A route ingested at 10 miles must say so
   rather than offer three options that show identical rows.
 
 **Who gets hidden, and why it is always a toggle**
 
-- **Hiding is never deleting.** Franchises, home daycares, schools and colleges,
+- **Hiding is never deleting. [shared]** Franchises, home daycares, schools and colleges,
   and no-outdoor-play shapes are all flags on the row. The data stays in D1. A
   preference is not a fact about the world, and today's "don't show me these"
   becomes next year's lead list.
-- **She never has to press anything to get a clean list.** As of 2026-08-28 the
+- **She never has to press anything to get a clean list. [shared]** As of 2026-08-28 the
   junk categories are hidden by default with no toggles to manage: a single
   collapsed line above the list says how many were hidden and why, a Show
   control expands them as muted rows, and each carries a Restore for its
@@ -176,8 +233,8 @@ them only with a reason better than the one recorded here.
     early-childhood-adjacent name (learning, children's, weekday, ministry,
     development center). Stronger types do not.
   - **Ambiguous rows stay visible** and get reported to her, never guessed at.
-- **That asymmetry is the general rule for this whole class of heuristic.** When
-  unsure whether to hide, don't.
+- **That asymmetry is the general rule for this whole class of heuristic.
+  [shared]** When unsure whether to hide, don't.
 
 **Playground signals are signals, not facts**
 
@@ -200,6 +257,51 @@ them only with a reason better than the one recorded here.
   which is how you actually work a cluster); name makes it fully deterministic.
   The same tuple is applied in the SQL `ORDER BY`, in the pipeline before
   insert, and in the frontend's sort, so the three never disagree.
+
+**area-caller: the lead score, and what "no website" means here**
+
+- **"No website" is the headline, not a footnote.** In route-caller a missing
+  website is one prospecting signal among several and renders as a muted grey
+  badge. In area-caller it is the entire pitch — Vertizin sells a website — so
+  it is a **green-flag badge**, the first term of the sort, its own filter, and
+  the number printed on every area card. Same data, opposite emphasis, on
+  purpose.
+- **The lead score is defined in exactly one place**, `src/areas/leadScore.js`,
+  which exports both the SQL fragment the Worker orders by and the JS comparator
+  the pipeline and the frontend use. A test asserts the two produce the same
+  order against real SQLite. It is: no website first, then review count
+  descending, then distance from centre, then name.
+- **Review count is the established-business proxy**, and it is why the field
+  mask asks for `rating` and `userRatingCount`. It bills in the same Places
+  Enterprise tier as the phone number this account already pays for.
+- **A NULL review count is not zero.** It means the Enterprise mask was
+  unavailable on that run. It sorts to the bottom of its group and renders as
+  "no rating", never as a business nobody has reviewed. Same reasoning as
+  `playground_nearby`: absence of data is not data.
+- **Franchises are matched against an explicit brand list, never a name
+  pattern.** The deciding evidence is one pair: "Roto-Rooter" is a national
+  franchise and "Rooter Man of Athens LLC" is somebody's independent shop —
+  precisely the owner-operated business Vertizin sells to. A `/rooter/` pattern
+  flags both. The same trap sits under "one hour", "benjamin franklin" and "mr".
+  Expect to expand the list from real data, as the childcare list was expanded.
+  Suppliers are the one place a shape rule is allowed (`… Plumbing Supply`,
+  `… Wholesale`, `… Distributing`), because supply houses announce themselves.
+- **Overpass is deliberately not used for areas.** OSM's `craft=*` coverage in
+  the US is thin, it is the least reliable dependency in route-caller, and it is
+  essentially all of route-caller's wall time. Skipping it is why an area pull
+  takes ~5 s where a route ingest takes 22–32 s. This is a considered omission,
+  not an oversight.
+- **A Places type is a hope, not a fact.** Measured 2026-08-29: `hvac_contractor`
+  does not exist in Places (New) and 400s the whole nearby call. So each
+  industry's types are probed once at the centre and the industry falls back to
+  text search per tile if they are rejected. A stale type name costs one wasted
+  call, never an empty area.
+- **A search that silently returns nothing is worse than one that fails loudly.**
+  Places Text Search rejects a circle in `locationRestriction` — only a
+  rectangle — and the first Huntsville pilot lost every per-tile HVAC search to
+  a swallowed 400: 45 extra calls, byte-identical results, 27 HVAC companies
+  instead of 142. Tile failures are now counted and reported in `meta`, and the
+  UI surfaces them.
 
 **UI**
 
