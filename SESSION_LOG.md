@@ -5,6 +5,143 @@ more importantly **why** the judgment calls went the way they did.
 
 ---
 
+## 2026-08-30 — area-caller phase 2: the pipeline with no gray zone in it
+
+The spec for this one opened with Micaiah's own framing, and it is the reason
+every decision below went the way it did:
+
+> The call has two gates: are they shopping for a website person, and will they
+> book a brainstorm meeting right now. **If they don't book, they're out.** No
+> nurture stages, no warming, no callback-for-the-maybe. "You're either ready or
+> you're not."
+
+That is a product decision, not a preference about labels, and the interesting
+part of the work was making the software *hold* it rather than merely describe
+it.
+
+### Where the philosophy became code
+
+**The status set has nothing between `meeting_set` and `out`**, and there is a
+test that says so by name — it asserts that "interested", "warm", "nurture",
+"maybe" and "callback" are all absent. A test that enumerates statuses would
+have passed just as well; this one exists so that a future change has to argue
+with the philosophy rather than slip past it. The generic `interested` that
+phase 1 inherited is exactly the soft middle being removed, and migration 0008
+maps it onto `meeting_set`.
+
+**`meeting_set` is rejected server-side without a `meeting_at`.** This is the
+same rule in a different disguise: a booked brainstorm with no time on it would
+sit in the pipeline looking like progress while being nothing at all — a gray
+zone wearing the milestone's name. The UI therefore asks for the time in the
+same interaction that sets the status, and the Worker refuses the row if it
+somehow arrives without one.
+
+**Terminal is not unreachable.** `out` and `lost` mute rather than disappear,
+and every status is reversible, because a wrong tap on a phone with one thumb
+must be undoable. That is the hiding-is-never-deleting rule applied to workflow.
+
+**Dates go inert, never deleted.** Moving a row off `meeting_set` keeps its
+`meeting_at`; a `follow_up_date` on a row that is now `out` is kept too. Neither
+is surfaced. This is enforced in exactly one place — the agenda query's WHERE
+clause — rather than in three places that could disagree, and there is a test
+that the inert value is still in the database afterwards.
+
+### The timezone decision, pinned on purpose
+
+The spec asked for this to be pinned and documented, and it deserved the
+attention. Both new columns store **local wall-clock strings with no zone**:
+`'YYYY-MM-DD'` and `'YYYY-MM-DDTHH:MM'`. The server does no date comparison at
+all — it returns the strings verbatim, and the browser decides what "today"
+means against its own local date.
+
+For a single-user tool in one timezone that is both simpler and more correct
+than storing UTC. He books "Tuesday 2pm" and it is 2pm, including from another
+state; the value is readable in a D1 console; and there is no zone to guess.
+
+The specific trap that shaped the code: **`new Date('2026-08-30')` parses as
+midnight UTC**, which is the previous day for anyone west of Greenwich. A
+follow-up due today would have read as overdue and a meeting today would have
+vanished from the panel — both silent, both only visible in the afternoon. So
+nothing in `agenda.js` ever hands a date string to `new Date`; local dates are
+built with `new Date(y, m - 1, d)`, and a test asserts the resulting hour is 0
+local rather than a shifted instant. The Google Calendar link carries no
+trailing `Z` for the same reason: an unzoned stamp is what tells Google to read
+the time in the calendar's own timezone, which is the promise the stored string
+made.
+
+### One implementation of the date logic, not two
+
+The Today panel's logic has to run in the browser, and it has to be tested. The
+frontend is a plain script with no build step and the Worker is an ES module, so
+the obvious outcomes were a duplicate or an untested one.
+
+Instead `demos/area-caller/agenda.js` is a small UMD file: the browser loads it
+as a script, and the Worker's test suite `require`s it directly through
+`createRequire`. **What ships is what is tested** — the classification, the
+follow-up chips, the due labels and the calendar link are all exercised as the
+actual shipped code. The one thing genuinely duplicated is the status list
+(Worker-side in `src/areas/statuses.js`), and a test asserts the two lists are
+identical, the same anti-drift trick the lead-score SQL/JS test uses.
+
+The calendar tests use a deliberately awful business name —
+`Bob's Heating & Air, LLC "The Best" <Huntsville> 100% #1` — because the whole
+feature is one URL and the failure mode is a quote or an ampersand truncating
+it.
+
+### The funnel, and a counting decision worth recording
+
+`248 leads · 31 reached · 4 meetings · 1 won`. Two judgment calls in that line:
+
+- **`reached` is any status except `not_called`**, not "spoke to a human". A
+  voicemail is progress through the list even though nobody answered, and the
+  number he wants is "how far into this town am I".
+- **`meetings` counts `meeting_set` + `won` + `lost`.** Counting only
+  `meeting_set` would make the funnel *shrink* as deals closed, which is the
+  opposite of what a funnel is for. Every won deal came from a meeting; every
+  lost one is a meeting that happened.
+
+Each stage counts visible rows only, the same rule as `visible_count`, so the
+funnel can never read "4 meetings" against a 3-lead list. A test asserts each
+stage is a subset of the one before it.
+
+### The pre-check, and why it is worth doing every time
+
+Before applying 0008 the live database was queried: **all 259 pilot rows were
+`not_called`, no flags, no notes.** So the remap was known to be a no-op before
+it ran, and was verified as one afterwards. route-caller's 2,985 rows were
+checked before and after too.
+
+That check took one query and would have changed the plan entirely if a single
+row had carried real work — the remap would have needed a report, and possibly
+his sign-off, rather than being a footnote.
+
+### Verified live, then cleared
+
+The whole pipeline was exercised against the deployed Worker: `meeting_set`
+without a time refused, a `Z`-suffixed datetime refused, the retired
+`interested` status refused, a real meeting set and read back through
+`/api/agenda`, a follow-up scheduled and rendered as "3 days overdue", a `won`
+row correctly dropped from the agenda with its `meeting_at` still stored, and
+the funnel reading `248 leads · 3 reached · 2 meetings · 1 won`. Then all of it
+was cleared and the area is back to 248 leads at zero reached.
+
+The frontend was booted against that live state in a DOM shim — Chrome is not
+connected in this environment — which rendered the Today panel with a real
+2:00 PM meeting and a real overdue retry, the funnel line, and the three card
+states. That shim also caught a genuine bug that a browser might not have: two
+new helpers declared a local `const el`, shadowing the module-level element
+registry. Working code, one edit away from a very confusing failure.
+
+### A correction to the last entry
+
+The 2026-08-29 report and commit message said **217 tests (126 route + 91
+area)**. Those were mid-session counts; the suite had already grown to 220
+(126 + 94) by the end of that session as two more tests were added. The 126 —
+the number the byte-identical claim rests on — was and remains correct. Docs are
+updated; the total is now **271** (126 route + 145 area).
+
+---
+
 ## 2026-08-29 — area-caller: a second product on the same Worker
 
 Vertizin needed an outbound acquisition list: local service trades around a

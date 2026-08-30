@@ -26,7 +26,8 @@ import {
   reviewDistribution,
   noWebsiteCount,
 } from './pipeline.js';
-import { AREA_LIST_SQL, AREA_FACILITIES_SQL } from './queries.js';
+import { AREA_LIST_SQL, AREA_FACILITIES_SQL, AGENDA_SQL } from './queries.js';
+import { AREA_STATUSES, RETRYABLE_STATUSES, isLocalDate, isLocalDateTime } from './statuses.js';
 import {
   matchAreaCandidates,
   areaEnrichmentPatch,
@@ -49,8 +50,6 @@ export const SEARCH_CONCURRENCY = 12;
 // The paid Workers ceiling. Route ingest sits at ~114 of this; the budget test
 // asserts the worst-case area stays under it too.
 export const SUBREQUEST_CEILING = 1000;
-
-const STATUSES = ['not_called', 'no_answer', 'voicemail', 'interested', 'not_interested'];
 
 /**
  * How many searches one tile costs, given the industries selected and how each
@@ -433,14 +432,35 @@ export function listIndustries(json) {
   });
 }
 
+/**
+ * Update one business's pipeline state.
+ *
+ * Two rules are enforced HERE and not only in the UI, because they are what
+ * makes the pipeline binary rather than a set of loose fields:
+ *
+ * 1. `meeting_set` REQUIRES a `meeting_at`. A booked brainstorm with no time on
+ *    it is exactly the gray zone this product refuses to have — it would sit in
+ *    the pipeline looking like progress while being nothing. The row must
+ *    already carry a time or the same request must supply one.
+ * 2. Neither date is ever cleared by a status change. Moving off `meeting_set`
+ *    keeps `meeting_at` stored and inert; the agenda query simply stops
+ *    surfacing it. Only an explicit `null` from him clears a date.
+ */
 export async function patchAreaFacility(request, env, id, json) {
   const body = await request.json().catch(() => ({}));
+  const existing = await env.DB.prepare(
+    'SELECT status, meeting_at, follow_up_date FROM area_facilities WHERE id = ?'
+  )
+    .bind(id)
+    .first();
+  if (!existing) return json({ error: 'Business not found' }, 404);
+
   const sets = [];
   const values = [];
 
   if (body.status !== undefined) {
-    if (!STATUSES.includes(body.status)) {
-      return json({ error: `status must be one of: ${STATUSES.join(', ')}` }, 400);
+    if (!AREA_STATUSES.includes(body.status)) {
+      return json({ error: `status must be one of: ${AREA_STATUSES.join(', ')}` }, 400);
     }
     sets.push('status = ?');
     values.push(body.status);
@@ -453,7 +473,31 @@ export async function patchAreaFacility(request, env, id, json) {
     sets.push('notes = ?');
     values.push(String(body.notes).slice(0, 4000));
   }
+  if (body.meeting_at !== undefined) {
+    if (body.meeting_at !== null && !isLocalDateTime(body.meeting_at)) {
+      return json({ error: 'meeting_at must be local wall-clock YYYY-MM-DDTHH:MM, or null' }, 400);
+    }
+    sets.push('meeting_at = ?');
+    values.push(body.meeting_at);
+  }
+  if (body.follow_up_date !== undefined) {
+    if (body.follow_up_date !== null && !isLocalDate(body.follow_up_date)) {
+      return json({ error: 'follow_up_date must be local YYYY-MM-DD, or null' }, 400);
+    }
+    sets.push('follow_up_date = ?');
+    values.push(body.follow_up_date);
+  }
   if (!sets.length) return json({ error: 'Nothing to update' }, 400);
+
+  const nextStatus = body.status ?? existing.status;
+  const nextMeetingAt =
+    body.meeting_at !== undefined ? body.meeting_at : existing.meeting_at;
+  if (nextStatus === 'meeting_set' && !isLocalDateTime(nextMeetingAt)) {
+    return json(
+      { error: 'meeting_set requires meeting_at — a booked brainstorm needs a time on it' },
+      400
+    );
+  }
 
   sets.push("updated_at = datetime('now')");
   const row = await env.DB.prepare(
@@ -464,6 +508,19 @@ export async function patchAreaFacility(request, env, id, json) {
 
   if (!row) return json({ error: 'Business not found' }, 404);
   return json({ facility: row });
+}
+
+/**
+ * Everything the Today panel needs, across every area — the same rows the
+ * in-area panel filters down by `area_id`, so both are one component over one
+ * query.
+ *
+ * No date comparison happens server-side: the strings are local wall-clock and
+ * the Worker does not know his timezone, so the browser decides what today is.
+ */
+export async function getAgenda(env, json) {
+  const { results } = await env.DB.prepare(AGENDA_SQL).all();
+  return json({ rows: results || [], statuses: AREA_STATUSES, retryable: RETRYABLE_STATUSES });
 }
 
 const selectArea = (env, id) =>

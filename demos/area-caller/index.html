@@ -19,6 +19,8 @@
       <h1>Your call lists</h1>
       <p class="lede">Local trade businesses around a town. No website first.</p>
     </header>
+    <section id="today-landing" class="today"></section>
+
     <div id="area-list" class="route-list"></div>
     <button id="btn-new-area" class="btn-primary btn-block">+ New area</button>
   </section>
@@ -74,9 +76,15 @@
           <option value="all">All</option>
           <option value="no_website">No website</option>
           <option value="not_called">Not called</option>
-          <option value="called">Called</option>
+          <option value="called">Reached</option>
           <option value="flagged">Flagged</option>
-          <option value="interested">Interested</option>
+          <option value="pipeline">Pipeline</option>
+          <option value="no_answer">No answer</option>
+          <option value="voicemail">Voicemail</option>
+          <option value="out">Out</option>
+          <option value="meeting_set">Meeting set</option>
+          <option value="won">Won</option>
+          <option value="lost">Lost</option>
         </select>
       </div>
 
@@ -91,6 +99,8 @@
       </div>
       <p id="enrich-status" class="head-note" hidden></p>
     </header>
+
+    <section id="today-area" class="today"></section>
 
     <div id="map-panel" class="map-panel" hidden><div id="map"></div></div>
 
@@ -111,6 +121,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="./config.js"></script>
+  <script src="./agenda.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

@@ -13,9 +13,11 @@ Two live products share ONE Cloudflare Worker and ONE D1 database, both in
 
 - **route-caller** — phase 1 complete and live, awaiting the caller's first real
   session, whose feedback decides phase 2 versus corridor tuning.
-- **area-caller** — phase 1 complete and live as of 2026-08-29, with the
-  Huntsville pilot loaded (259 businesses, 97 with no website), awaiting her
-  reaction to that list.
+- **area-caller** — phase 1 (the list) and phase 2 (the binary pipeline, the
+  Today panel, the calendar handoff) both complete and live as of 2026-08-30.
+  The Huntsville pilot is loaded — 248 leads, 97 with no website, zero reached.
+  Awaiting Micaiah working a town with it. The pipeline's philosophy is a locked
+  decision in `CONTEXT.md`: two gates, and if they don't book, they're out.
 
 ## Session handoff
 

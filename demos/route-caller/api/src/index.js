@@ -9,6 +9,7 @@
 //
 // Area Caller (the trades acquisition list — additive, see src/areas/):
 //   GET    /api/industries          the preset industry menu
+//   GET    /api/agenda              meetings + follow-ups for the Today panel
 //   POST   /api/areas               geocode + tile + search + classify + persist
 //   GET    /api/areas               list areas with counts
 //   GET    /api/areas/:id           one area + its list in lead-score order
@@ -50,6 +51,7 @@ import {
   enrichArea,
   listIndustries,
   patchAreaFacility,
+  getAgenda,
 } from './areas/handlers.js';
 
 // Ingest wide, filter narrow. Her decision: store the full 30-mile corridor so
@@ -115,6 +117,7 @@ export default {
 
       // --- Area Caller. Separate paths, separate tables, same Worker. ---
       if (path === '/api/industries' && method === 'GET') return listIndustries(json);
+      if (path === '/api/agenda' && method === 'GET') return await getAgenda(env, json);
       if (path === '/api/areas' && method === 'POST') return await createArea(request, env, json);
       if (path === '/api/areas' && method === 'GET') return await listAreas(env, json);
 

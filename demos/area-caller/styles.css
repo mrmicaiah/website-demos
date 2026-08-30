@@ -518,3 +518,186 @@ body {
   display: inline-block;
   margin-top: 6px;
 }
+
+/* ================= phase 2: the binary pipeline =================
+   Two gates — are they shopping, and will they book right now. If they don't
+   book they're out. Nothing below adds a shade between "meeting set" and
+   "out", and nothing should. */
+
+/* ---------- the Today panel ----------
+   This IS the reminder system: no notifications, no email. Opening the tool
+   tells him the day. */
+.today { margin: 0 0 14px; }
+.today:empty { display: none; }
+
+.today-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.today-block.is-meetings { border-left: 4px solid var(--green-action); }
+.today-block.is-followups { border-left: 4px solid var(--amber); }
+
+.today-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.today-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--green-pill-text);
+}
+.today-block.is-followups .today-title { color: #8A6A1B; }
+.today-count { color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+
+.today-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.today-row:first-of-type { border-top: 0; }
+.today-when {
+  flex: 0 0 auto;
+  min-width: 72px;
+  font-weight: 800;
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+.today-when.is-overdue { color: var(--danger); }
+.today-main { flex: 1; min-width: 0; }
+.today-name {
+  display: block;
+  font-weight: 700;
+  font-size: 0.94rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.today-sub { color: var(--muted); font-size: 0.76rem; }
+.today-actions { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; }
+
+.mini-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 9px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--green-action);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mini-btn.is-call { background: var(--green-action); color: #fff; border-color: var(--green-action); }
+.mini-btn.is-cal { color: var(--navy); }
+
+.today-more {
+  background: none;
+  border: 0;
+  color: var(--green-action);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 0 0;
+  cursor: pointer;
+}
+.today-quiet {
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 2px 4px 8px;
+}
+
+/* ---------- funnel line on area cards ---------- */
+.route-item .area-funnel {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+.route-item .area-funnel b { color: var(--ink); font-weight: 800; }
+.route-item .area-funnel .is-won { color: var(--green-action); }
+
+/* ---------- card pipeline states ---------- */
+.fac-card.is-meeting {
+  border-left: 4px solid var(--green-action);
+  background: #FBFDFB;
+}
+.fac-card.is-won {
+  border-left: 4px solid var(--green-pill-text);
+  background: #F5FAF6;
+}
+.fac-card.is-won .fac-name::after {
+  content: ' ✓';
+  color: var(--green-action);
+  font-weight: 800;
+}
+/* Out and lost mute rather than vanish — terminal, but reversible. */
+.fac-card.is-closed { opacity: 0.6; }
+.fac-card.is-called.is-meeting,
+.fac-card.is-called.is-won { opacity: 1; }
+
+.meeting-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--green-pill);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--green-pill-text);
+}
+.meeting-line .meeting-when { flex: 1; min-width: 0; }
+
+.followup-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.followup-line .followup-when { font-weight: 700; color: var(--ink); }
+.followup-line .followup-when.is-overdue { color: var(--danger); }
+
+/* One tap, no modal ceremony. */
+.chip-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip-quiet {
+  border: 1px solid var(--line);
+  background: #FAFAF8;
+  border-radius: 999px;
+  padding: 6px 11px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--green-action);
+  cursor: pointer;
+}
+.chip-quiet:active { background: var(--green-pill); }
+.chip-quiet.is-clear { color: var(--muted); }
+
+.when-input {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 8px 9px;
+  border: 1px solid var(--green-action);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+  min-width: 0;
+  flex: 1;
+}
+.when-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.when-hint { flex-basis: 100%; color: var(--muted); font-size: 0.74rem; }

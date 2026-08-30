@@ -1,6 +1,6 @@
 # STATE
 
-_Last updated: 2026-08-29_
+_Last updated: 2026-08-30_
 
 Current status. Rewritten each session — this file is not history, `SESSION_LOG.md` is.
 
@@ -8,6 +8,8 @@ Current status. Rewritten each session — this file is not history, `SESSION_LO
 is complete and awaiting the caller's first real session; area-caller phase 1 is
 complete, deployed, and has a live pilot in it. Everything below is split into a
 route-caller section and an area-caller section.
+
+**area-caller phase 2 (the binary pipeline) shipped on 2026-08-30** and is live.
 
 # route-caller
 
@@ -76,9 +78,11 @@ route-caller section and an area-caller section.
   dance, martial arts and swim shapes (hidden by default behind a fourth
   toggle). Signals, not facts — see `CONTEXT.md`.
 - **126 route-caller tests passing, unchanged** — `cd demos/route-caller/api &&
-  npm test` now runs **217** (126 route + 91 area). The 126 are byte-for-byte
+  npm test` now runs **271** (126 route + 145 area). The 126 are byte-for-byte
   the same assertions as before area-caller landed, and that is the proof that
-  extracting `src/shared/` changed no route behaviour.
+  extracting `src/shared/` changed no route behaviour. (The 2026-08-29 report
+  said 217 total / 91 area; those were mid-session counts and the suite had
+  already reached 220/94 by the end of that session. The 126 was correct.)
   Corridor math, sampling, dedupe, drive order, the deny-list, the metrics, and
   the school classifier in both directions.
 - **Four modules moved into `src/shared/` and are now used by both pipelines** —
@@ -254,7 +258,7 @@ tiling density.
   the disc, not by counting points.
 - **Enrichment shipped in phase 1**, not deferred — the shared rails made it
   cheap, and it was proven live (see below).
-- **91 area tests**, `npm test` runs 217 total. Tiling coverage, the tile
+- **145 area tests** (94 phase 1 + 51 phase 2), `npm test` runs 271 total. Tiling coverage, the tile
   rectangle, dedupe by place id and by name+geo, industry shapes, the junk
   classifier in both directions, lead-score ordering including NULL review counts
   **verified against real SQLite so the SQL and the JS comparator cannot drift**,
@@ -286,6 +290,64 @@ Among the 97 no-website leads: 1–9 **58**, 10–49 **23**, 50–99 **4**, 100+
 unknown 11. **That shape is the finding worth acting on** — the no-website rows
 skew small. The single best lead in Huntsville is DrainPro Express (117 reviews,
 5.0, no site); after the top ten it thins out fast.
+
+### Phase 2 — the binary pipeline (2026-08-30)
+
+Two gates, no gray zone. See the locked decision in `CONTEXT.md` for Micaiah's
+own framing; everything here follows from it.
+
+- **Migration `0008_area_pipeline`, applied remotely.** Adds `follow_up_date`
+  (`'YYYY-MM-DD'`) and `meeting_at` (`'YYYY-MM-DDTHH:MM'`), both local
+  wall-clock, never UTC. Remaps `interested` to `meeting_set` and
+  `not_interested` to `out`. **Live pre-check before applying: all 259 pilot
+  rows were `not_called` with no flags and no notes, so the remap affected 0
+  rows** — verified again afterwards. route-caller's 2,985 rows were untouched
+  and re-verified.
+- **Statuses**: `not_called`, `no_answer`, `voicemail`, `out`, `meeting_set`,
+  `won`, `lost`. Enforced server-side, and `meeting_set` is **rejected without a
+  `meeting_at`** — a booked brainstorm with no time on it is the soft middle
+  this product refuses to have.
+- **`GET /api/agenda`** — meetings and due follow-ups across every area, with
+  the area name joined on. The **inert rule** lives in this one query: a
+  `meeting_at` counts only while the row is still `meeting_set`, a
+  `follow_up_date` only while the row is still retryable. Both stay in the
+  database on a row that has moved on.
+- **The Today panel** — one component, at the top of the landing page and at the
+  top of each area's list (area-filtered there). Meetings today, next 7 days
+  collapsed, follow-ups due or overdue oldest first, tap-to-call, jump-to-card,
+  and the calendar button. Empty state is one quiet line. **This is the reminder
+  system**: no notifications, no email, nothing to configure.
+- **Calendar handoff** — a prefilled `calendar.google.com/render` link, 45
+  minutes by default, title "Brainstorm: {business}", details carrying the
+  phone, the address and a snapshot of the notes. No OAuth, nothing to
+  authenticate, works everywhere.
+- **Funnel on area cards** — `248 leads / 31 reached / 4 meetings / 1 won`, one
+  muted line under the lead count. Cumulative and visible-rows-only;
+  `meeting_count` is meeting_set + won + lost, because a won deal came from a
+  meeting and counting only `meeting_set` would make the funnel shrink as deals
+  closed.
+- **Card interactions** — status dropdown in pipeline order; choosing
+  `meeting_set` opens an inline datetime input in the same interaction; choosing
+  `no_answer`/`voicemail` offers Tomorrow / In 3 days / Next week / pick-a-date
+  as one-tap chips with a Skip. `meeting_set` cards get a left border accent,
+  the meeting time and the calendar button; `won` gets a quiet checkmark accent;
+  `out` and `lost` mute. Transient card UI is keyed by facility id so it
+  survives the re-render a save triggers.
+- **`demos/area-caller/agenda.js`** — the date logic and the calendar link, ONE
+  implementation, loaded by the browser as a plain script and `require`d
+  directly by the Worker's test suite. What ships is what is tested.
+- **Enrichment cannot move a meeting** — `meeting_at` and `follow_up_date` are
+  protected columns, and the area snapshot rails now verify them alongside
+  status/flags/notes on every enrichment run.
+
+**Verified live against the deployed Worker** (version
+`821abc36-9223-4515-b684-9bd20de36dac`), then cleared: `meeting_set` without a
+time refused, a `Z`-suffixed datetime refused, the retired `interested` status
+refused, a real meeting set and read back through `/api/agenda`, a follow-up
+scheduled and shown as "3 days overdue", a `won` row correctly dropped from the
+agenda with its `meeting_at` still stored, and the funnel reading
+`248 leads / 3 reached / 2 meetings / 1 won`. The pilot area is back to zero
+call activity.
 
 ### Cost math, per area
 
@@ -349,6 +411,13 @@ name patterns as too risky, and one research org on a list is cheaper than
 hiding a real Montessori institute.
 
 ### Open questions for area-caller
+
+0. **The pipeline has never been used in anger.** Every status, meeting and
+   follow-up in it so far was planted by a worker and cleared again. The
+   Huntsville list is 248 leads at zero reached. Nothing about the workflow
+   should be tuned before he works a town with it — in particular, do not add a
+   status because one call felt like it needed one.
+
 
 1. **The franchise and supplier lists need real-data expansion**, exactly as the
    childcare list did. Huntsville flagged 6 distinct franchise brands and one
@@ -425,6 +494,13 @@ hiding a real Montessori institute.
   went through when invoked directly. The classifier's behaviour is not stable
   between sessions — if one form is refused, try the other rather than assuming
   the capability is gone.
+- **The area status set is area-caller's ONLY.** `facilities` still uses
+  `not_called / no_answer / voicemail / interested / not_interested`, and
+  `area_facilities` uses the pipeline set. They are validated by two different
+  lists in two different files on purpose; do not "unify" them.
+- **`meeting_at` and `follow_up_date` are local wall-clock strings, never UTC,
+  and never parsed with `new Date(string)`.** See the locked decision in
+  `CONTEXT.md`. A test pins it.
 - **A remote D1 call can fail once with `code: 7403` "account not authorized"
   and succeed on an immediate retry.** It happened on the first
   `migrations apply` of this session with valid credentials and `d1 (write)` in
@@ -438,11 +514,12 @@ hiding a real Montessori institute.
 
 1. Confirm the outstanding commits are pushed (`git fetch` first). **This session
    committed but did not push, as instructed.**
-2. **Put the Huntsville pilot in front of the caller.** It is live at
-   `demos/area-caller/` against the deployed Worker. The number to put in front
-   of her first is **97 businesses with no website**, and the question is whether
-   the top ten feel like real calls. That answer decides whether area-caller
-   phase 2 is a review-count floor, more trades, or nothing at all.
+2. **Micaiah works a town with it.** area-caller is now complete as a workflow:
+   248 leads, 97 with no website, the binary pipeline, the Today panel and the
+   calendar handoff. The two numbers to watch on the first real session are how
+   many of the 97 answer, and how many of those book. Everything else waits on
+   that — including whether the no-website leads' small review counts (58 of 97
+   under ten reviews) actually matter.
 3. Put the school toggle in front of the caller and check the three private
    schools listed above — flag them or not?
 4. Gather her reactions on **capacity badges** (does the missing data matter, or

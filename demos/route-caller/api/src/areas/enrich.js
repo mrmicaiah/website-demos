@@ -12,7 +12,7 @@
 
 import { haversineMeters } from '../geo.js';
 import { normalizeName } from '../shared/names.js';
-import { makePatchAssertion, snapshotOf, verifySnapshot } from '../shared/snapshot.js';
+import { makePatchAssertion, makeSnapshotRails } from '../shared/snapshot.js';
 import { isTradeFranchise, isSupplierOrRetail } from './classify.js';
 
 const MATCH_RADIUS_M = 150;
@@ -29,11 +29,23 @@ export const AREA_PROTECTED_COLUMNS = new Set([
   'lng',
   'distance_from_center_m',
   'industry', // the FIRST finder is a historical fact; `industries` is the growing one
+  // A booked brainstorm and a scheduled retry are as much his work as a note is.
+  // Re-checking a town must never move a meeting.
+  'meeting_at',
+  'follow_up_date',
 ]);
 
 export const assertAreaPatchIsSafe = makePatchAssertion(AREA_PROTECTED_COLUMNS);
 
-export { snapshotOf, verifySnapshot };
+/**
+ * The area rails guard the two pipeline dates as well as status/flagged/notes,
+ * so an enrichment run that silently cleared a meeting would be caught in
+ * production, not just in review.
+ */
+export const { snapshotOf, verifySnapshot } = makeSnapshotRails([
+  'meeting_at',
+  'follow_up_date',
+]);
 
 /**
  * Decide, per candidate: update an existing row, insert a new one, or too

@@ -303,6 +303,72 @@ shared, it is shared in CODE too — `api/src/shared/` — not copied.
   instead of 142. Tile failures are now counted and reported in `meta`, and the
   UI surfaces them.
 
+**area-caller: the binary pipeline (2026-08-30)**
+
+Micaiah's own words, and they govern every judgment call in this product:
+
+> The call has two gates: are they shopping for a website person, and will they
+> book a brainstorm meeting right now. **If they don't book, they're out.** No
+> nurture stages, no warming, no callback-for-the-maybe. **"You're either ready
+> or you're not."**
+
+- **The tool enforces that path; it does not soften it.** Any design choice that
+  adds a gray zone between `meeting_set` and `out` is wrong for this product.
+  The status set is `not_called → no_answer / voicemail → out | meeting_set →
+  won | lost`, and there is deliberately nothing in the gap. A test asserts that
+  no soft status ("interested", "warm", "nurture", "maybe", "callback") is in
+  the list, so a future change has to argue with this paragraph rather than
+  slip past it.
+- **`meeting_set` requires a `meeting_at`, enforced server-side.** A booked
+  brainstorm with no time on it IS the soft middle — it would sit in the
+  pipeline looking like progress while being nothing. The UI asks for the time
+  in the same interaction that sets the status.
+- **Terminal is not unreachable.** `out` and `lost` are reversible like
+  everything else here; a wrong tap must be undoable. Muted, never hidden.
+- **Dates go inert, never deleted.** A `meeting_at` on a row moved off
+  `meeting_set`, or a `follow_up_date` on a row now `out`, stays in the database
+  and simply stops being surfaced. Same rule as hiding-is-never-deleting, one
+  layer down. Enforced in one place: the agenda query.
+- **This applies to area-caller ONLY.** `facilities` keeps route-caller's
+  generic status set — the caller works a different pipeline and this is not
+  her workflow.
+
+**area-caller: dates are local wall-clock, and the server never decides "today"**
+
+- `follow_up_date` is `'YYYY-MM-DD'` and `meeting_at` is `'YYYY-MM-DDTHH:MM'`.
+  **Neither is ever UTC.** He books "Tuesday 2pm" and it stays 2pm — including
+  if he opens the tool from another state. Converting to UTC would require
+  knowing his zone, would make the value unreadable in a D1 console, and would
+  move a meeting.
+- **The Worker returns these strings verbatim and does no date comparison.**
+  What "today" means is decided in the browser, against the browser's own local
+  date, in `demos/area-caller/agenda.js`.
+- **Never `new Date('2026-08-30')`.** That parses as midnight UTC, which is the
+  previous day for anyone west of Greenwich — a follow-up due today would read
+  as overdue and a meeting today would vanish from the panel. Local dates are
+  built with `new Date(y, m - 1, d)`. There is a test for exactly this.
+- **The Google Calendar link carries no trailing `Z`**, for the same reason: an
+  unzoned stamp is what tells Google to read the time in the calendar's own
+  timezone, which is the wall-clock promise the stored string made.
+
+**area-caller: the Today panel IS the reminder system**
+
+- No notifications, no email, no digest, no cron. Opening the tool tells him the
+  day: meetings today (with the next 7 days collapsed) and follow-ups due or
+  overdue, oldest first. One component, on the landing page and at the top of
+  each area's list.
+- **A meeting earlier today still shows.** Dropping it at 9:05 would hide the
+  exact row that needs marking won or lost.
+- **Empty state is one quiet line, not a big empty box.** The panel must not
+  cost him screen while it has nothing to say.
+
+**area-caller: explicitly NOT being built (locked scope)**
+
+No email sequences. No deal values. No reminders or notifications. No
+multi-user. No nurture stages. No automation. **The Today panel and the binary
+pipeline ARE the workflow.** If one of these comes up again, the question to ask
+first is what it would add that a booked meeting does not.
+
 **UI**
 
 - **The UI must match the caller's reference design.** Deep green header card

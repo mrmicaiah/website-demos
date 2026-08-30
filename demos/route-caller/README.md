@@ -163,7 +163,7 @@ static server (`npx serve demos/route-caller`).
 cd demos/route-caller/api && npm test
 ```
 
-**217 checks — 126 route-caller, 91 area-caller.** The 126 are unchanged from
+**271 checks — 126 route-caller, 145 area-caller.** The 126 are unchanged from
 before area-caller landed, which is how the shared-module extraction is known to
 be behaviour-preserving.
 

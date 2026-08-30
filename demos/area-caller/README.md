@@ -6,7 +6,8 @@ The targets are local service trades — HVAC and plumbing first — and the cal
 works a town, debriefs, and pulls the next one. Moving towns is a thirty-second
 act.
 
-Phase 1. Single user, no auth.
+Phase 1 (the list) and phase 2 (the workflow) are both shipped. Single user, no
+auth.
 
 ## What it is for, and what that changes
 
@@ -33,12 +34,13 @@ Three consequences run through the whole tool:
 ```
 demos/area-caller/                ← this folder: the static frontend (GitHub Pages)
   index.html  styles.css  app.js  config.js
+  agenda.js                       ← date logic + calendar link; ALSO required by the tests
 
 demos/route-caller/api/           ← ONE Worker, ONE D1, shared with route-caller
   src/areas/{handlers,pipeline,queries,google,enrich,classify,industries,leadScore}.js
   src/shared/{tiling,dedupe,names,snapshot}.js    ← genuinely shared, both pipelines
-  migrations/0007_add_areas.sql
-  test/areas.test.mjs
+  migrations/0007_add_areas.sql  0008_area_pipeline.sql
+  test/areas.test.mjs  test/workflow.test.mjs
 ```
 
 `config.js` points at the same deployed Worker as route-caller. There is no
@@ -74,6 +76,98 @@ Leaflet + OpenStreetMap tiles, which need no key at all.
 route-caller (where it accounts for essentially all the wall time), and it
 contributes nothing a Places search does not already have for the trades. That
 is why an area pull takes ~5 s where a route ingest takes ~22–32 s.
+
+
+## The pipeline — two gates, no gray zone
+
+Micaiah's framing, and it governs everything below:
+
+> The call has two gates: are they shopping for a website person, and will they
+> book a brainstorm meeting right now. **If they don't book, they're out.** No
+> nurture stages, no warming, no callback-for-the-maybe. "You're either ready or
+> you're not."
+
+| status | means |
+| --- | --- |
+| `not_called` | untouched |
+| `no_answer` | rang out — retryable |
+| `voicemail` | left a message — retryable |
+| `out` | reached them, not ready. Covers "not shopping" AND "shopping but wouldn't book" |
+| `meeting_set` | the brainstorm is booked. **The** pipeline milestone |
+| `won` | signed |
+| `lost` | the meeting happened (or no-showed) and didn't close |
+
+There is deliberately **nothing between `meeting_set` and `out`**, and a test
+asserts that no soft status ("interested", "warm", "nurture", "maybe",
+"callback") is in the list — so a change has to argue with this section rather
+than slip past it.
+
+`meeting_set` is **rejected server-side without a `meeting_at`**. A booked
+brainstorm with no time on it is the same gray zone wearing the milestone's
+name. The UI asks for the time in the same interaction.
+
+Terminal is not unreachable: `out` and `lost` mute rather than vanish, and every
+status is reversible. And both dates go **inert, never deleted** — a
+`meeting_at` on a row moved off `meeting_set`, or a `follow_up_date` on a row
+that is now `out`, stays in the database and simply stops being surfaced.
+
+### Dates are local wall-clock. Always.
+
+`follow_up_date` is `'YYYY-MM-DD'` and `meeting_at` is `'YYYY-MM-DDTHH:MM'`.
+**Neither is ever UTC.** He books "Tuesday 2pm" and it stays 2pm, including from
+another state.
+
+The Worker does **no date comparison at all** — it returns the strings verbatim
+and the browser decides what "today" means against its own local date, in
+`agenda.js`. That file never hands a date string to `new Date`, because
+`new Date('2026-08-30')` parses as midnight UTC: west of Greenwich that silently
+turns "due today" into "overdue" and makes today's meeting disappear from the
+panel. Local dates are built with `new Date(y, m - 1, d)`, and a test pins it.
+
+## The Today panel
+
+One component, at the top of the landing page and at the top of each area's call
+list (area-filtered there). **It is the reminder system** — no notifications, no
+email, no digest, nothing to configure. Opening the tool tells him the day.
+
+- **Meetings today**, earliest first, with the next 7 days collapsed behind one
+  line. A meeting earlier today still shows: dropping it at 9:05 would hide the
+  row that needs marking won or lost.
+- **Follow-ups due** — today or overdue, **oldest first**, because the one that
+  has waited longest is the one to call.
+- Each row: tap-to-call, jump-to-card, and the calendar button on meetings.
+- Empty state is one quiet line, not a big empty box.
+
+## Calendar handoff
+
+No integration, no OAuth, nothing to authenticate. Setting a meeting reveals an
+**Add to Calendar** button — a prefilled `calendar.google.com/render` link,
+titled "Brainstorm: {business}", 45 minutes by default, with the phone, the
+address and a snapshot of the notes in the details.
+
+The times carry **no trailing `Z`**, which is what tells Google to read them in
+the calendar's own timezone — the same wall-clock promise the stored string
+makes. A `Z` there would silently move the meeting.
+
+## The funnel
+
+Area cards carry one muted line under the lead count:
+
+```
+248 leads · 31 reached · 4 meetings · 1 won
+```
+
+Cumulative, visible-rows-only. Two counting decisions worth knowing:
+**`reached` is any status except `not_called`** (a voicemail is progress through
+the list), and **`meetings` counts `meeting_set` + `won` + `lost`** — counting
+only `meeting_set` would make the funnel shrink as deals closed, which is the
+opposite of what a funnel is for.
+
+## Not being built (locked scope)
+
+No email sequences. No deal values. No reminders or notifications. No
+multi-user. No nurture stages. No automation. **The Today panel and the binary
+pipeline ARE the workflow.**
 
 ## The lead score
 
@@ -120,7 +214,8 @@ GET/POST/PATCH.
 | `GET` | `/api/areas` | areas with `facility_count`, `visible_count`, `no_website_count`, `called_count`, `flagged_count` |
 | `GET` | `/api/areas/:id` | area + businesses in lead-score order |
 | `POST` | `/api/areas/:id/enrich` | re-check in place: refresh review counts, insert newly found businesses, never touch status/flags/notes |
-| `PATCH` | `/api/area-facilities/:id` | `{ status?, flagged?, notes? }` |
+| `GET` | `/api/agenda` | meetings + due follow-ups across every area, for the Today panel |
+| `PATCH` | `/api/area-facilities/:id` | `{ status?, flagged?, notes?, meeting_at?, follow_up_date? }` — `meeting_set` is refused without a `meeting_at` |
 
 `meta` on a create reports the honest numbers: raw results, post-dedupe,
 stored, no-website count, per-industry counts, review distribution, franchise
@@ -154,8 +249,9 @@ Restore per category. The rows never leave D1.
 `POST /api/areas/:id/enrich` re-checks an area she is already calling. Same
 rails as route-caller, running the same shared code:
 
-- `status`, `flagged`, `notes`, `name`, the geometry and the first-finder
-  industry are **protected columns** — an update naming one throws.
+- `status`, `flagged`, `notes`, `name`, the geometry, the first-finder industry
+  and **both pipeline dates** are protected columns — an update naming one
+  throws. Re-checking a town must never move a booked meeting.
 - `phone` and `website` fill only from NULL. She may have corrected a number,
   and a "no website" badge must not flip out from under her mid-call.
 - `rating` and `review_count` **do** refresh. They are pure Google facts she
@@ -172,7 +268,7 @@ notes came back byte-for-byte.
 
 ```
 cd demos/route-caller/api
-npm test          # 217 checks — 126 route-caller, 91 area-caller
+npm test          # 271 checks — 126 route-caller, 145 area-caller
 npm run dev       # local Worker
 npm run deploy
 npm run migrate:remote
