@@ -34,5 +34,11 @@
     "name": "Stencel Electric",
     "description": "Client pitch: homepage redesign for a Huntsville-area electrician \u2014 multi-step quote form, panel-schedule services layout, local SEO structure.",
     "thumbnail": "./demos/stencel-electric/assets/thumbnail.svg"
+  },
+  {
+    "slug": "stencel-electric-b",
+    "name": "Stencel Electric \u2014 Concept 2 (Craftsman)",
+    "description": "Alternate direction: warm copper/slate craftsman aesthetic, photo-forward layout with job-photo slots, simple one-step callback form.",
+    "thumbnail": "./demos/stencel-electric-b/assets/thumbnail.svg"
   }
 ]
