@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electrician in Huntsville, AL — Stencel Electric | Licensed Residential &amp; Commercial</title>
+<meta name="description" content="Licensed electrician serving Huntsville, Madison, and all of Madison County, AL. Repairs, panel upgrades, lighting, and 24/7 emergency service. Owner-operated. Get a free quote in 60 seconds or call Justin: (720) 737-2207.">
+<link rel="canonical" href="https://stencelelectric.com/">
+<meta property="og:title" content="Electrician in Huntsville, AL — Stencel Electric">
+<meta property="og:description" content="Owner-operated electrical service for Huntsville &amp; Madison County. Free quotes, 24/7 emergencies.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stencelelectric.com/">
+<meta property="og:image" content="https://img1.wsimg.com/isteam/ip/92960140-a017-4a6c-8499-a5f9ccc69f4d/blob-bbffa49.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Electrician",
+  "name": "Stencel Electric LLC",
+  "url": "https://stencelelectric.com/",
+  "telephone": "+1-720-737-2207",
+  "image": "https://img1.wsimg.com/isteam/ip/92960140-a017-4a6c-8499-a5f9ccc69f4d/blob-bbffa49.png",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "204 Cheval Cir SE",
+    "addressLocality": "Brownsboro",
+    "addressRegion": "AL",
+    "postalCode": "35741",
+    "addressCountry": "US"
+  },
+  "areaServed": [
+    {"@type": "City", "name": "Huntsville"},
+    {"@type": "City", "name": "Madison"},
+    {"@type": "City", "name": "Brownsboro"},
+    {"@type": "City", "name": "Guntersville"},
+    {"@type": "City", "name": "Scottsboro"},
+    {"@type": "AdministrativeArea", "name": "Madison County, Alabama"}
+  ],
+  "founder": {"@type": "Person", "name": "Justin Stencel"},
+  "openingHours": "Mo-Sa 07:00-18:00",
+  "sameAs": ["https://www.facebook.com/109804492092110"]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F5EE;
+  --panel:#FFFFFF;
+  --ink:#232920;
+  --steel:#5E675E;
+  --line:#D9DACC;
+  --volt:#C5EB07;
+  --volt-ink:#232920;
+  --radius:6px;
+  --disp:"Barlow Condensed", "Arial Narrow", sans-serif;
+  --body:"Barlow", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#191d17;
+    --panel:#21261f;
+    --ink:#EDEFE3;
+    --steel:#A0A896;
+    --line:#343B31;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#191d17;
+  --panel:#21261f;
+  --ink:#EDEFE3;
+  --steel:#A0A896;
+  --line:#343B31;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *{animation:none !important;transition:none !important}
+}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:17px;
+  line-height:1.55;
+}
+a{color:inherit}
+img{max-width:100%}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* ---------- caution strip ---------- */
+.strip{
+  background:var(--volt);
+  color:var(--volt-ink);
+  font-family:var(--disp);
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.strip .wrap{display:flex;justify-content:space-between;gap:12px;padding:7px 20px}
+.strip a{text-decoration:none;white-space:nowrap}
+.strip a:hover{text-decoration:underline}
+@media (max-width:560px){.strip .wrap{justify-content:center}.strip span{display:none}}
+
+/* ---------- header ---------- */
+header{background:var(--paper);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:16px;padding:14px 20px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand img{height:48px;width:auto;display:block}
+.mark{
+  width:42px;height:42px;flex:none;
+  background:var(--ink);
+  border-radius:var(--radius);
+  display:none;align-items:center;justify-content:center;
+}
+.mark svg{width:22px;height:22px;fill:var(--volt)}
+.brand.fallback .mark{display:flex}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:24px;line-height:1;letter-spacing:.02em}
+.brand-sub{font-size:12.5px;color:var(--steel);letter-spacing:.04em}
+.hd nav{margin-left:auto;display:flex;gap:24px;font-weight:500;font-size:15.5px}
+.hd nav a{text-decoration:none;color:var(--steel)}
+.hd nav a:hover{color:var(--ink)}
+@media (max-width:760px){.hd nav{display:none}}
+.btn{
+  display:inline-block;
+  font-family:var(--disp);
+  font-weight:700;
+  font-size:18px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  text-decoration:none;
+  padding:11px 20px 12px;
+  border-radius:var(--radius);
+  border:2px solid var(--ink);
+  cursor:pointer;
+  background:transparent;
+  color:var(--ink);
+}
+.btn-volt{background:var(--volt);color:var(--volt-ink);border-color:var(--volt)}
+.btn-volt:hover{filter:brightness(1.05)}
+.btn-ghost:hover{background:var(--ink);color:var(--paper)}
+.hd .btn{margin-left:auto}
+@media (min-width:761px){.hd .btn{margin-left:0}}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:3px solid var(--volt);outline-offset:2px;
+}
+
+/* ---------- hero with form ---------- */
+.hero{padding:52px 0 56px;border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:start}
+@media (max-width:880px){.hero-grid{grid-template-columns:1fr;gap:36px}}
+.hero h1{
+  font-family:var(--disp);
+  font-weight:700;
+  font-size:clamp(40px, 6.4vw, 72px);
+  line-height:.97;
+  letter-spacing:.005em;
+}
+.hero .lede{margin-top:20px;max-width:52ch;font-size:18.5px;color:var(--steel)}
+.hero .lede strong{color:var(--ink);font-weight:600}
+.hero-cta{margin-top:26px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.hero-note{font-size:14.5px;color:var(--steel)}
+.hero-points{margin-top:34px;display:grid;gap:10px;font-size:15.5px;color:var(--steel)}
+.hero-points div{display:flex;gap:10px;align-items:baseline}
+.hero-points .bolt{color:var(--volt-ink);background:var(--volt);border-radius:3px;font-family:var(--disp);font-weight:700;font-size:13px;padding:1px 7px 2px;flex:none}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .hero-points .bolt{color:#232920}
+}
+
+/* ---------- multi-step form ---------- */
+.qform{
+  background:var(--panel);
+  border:2px solid var(--ink);
+  border-radius:var(--radius);
+  overflow:hidden;
+  box-shadow:6px 6px 0 var(--volt);
+}
+.qform-head{
+  background:var(--ink);
+  color:var(--paper);
+  padding:14px 20px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.qform-head h2{
+  font-family:var(--disp);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:.04em;
+}
+.qform-step-label{
+  font-family:var(--disp);
+  font-weight:600;
+  font-size:15px;
+  letter-spacing:.08em;
+  color:var(--volt);
+}
+.qbar{height:6px;background:var(--line)}
+.qbar-fill{height:100%;background:var(--volt);width:33.4%;transition:width .25s ease}
+.qbody{padding:22px 20px 24px}
+.qtitle{font-family:var(--disp);font-weight:700;font-size:24px;line-height:1.05;margin-bottom:16px}
+.step{display:none}
+.step.active{display:block}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.choices{grid-template-columns:1fr}}
+.choice{
+  border:2px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--paper);
+  padding:13px 14px;
+  font:inherit;
+  font-weight:600;
+  font-size:15.5px;
+  color:var(--ink);
+  text-align:left;
+  cursor:pointer;
+  display:flex;gap:10px;align-items:center;
+}
+.choice:hover{border-color:var(--steel)}
+.choice[aria-pressed="true"]{border-color:var(--ink);background:var(--volt);color:var(--volt-ink)}
+.choice .ico{flex:none;font-family:var(--disp);font-weight:700;font-size:14px;background:var(--ink);color:var(--volt);border-radius:3px;padding:1px 7px 2px}
+.choice[aria-pressed="true"] .ico{background:var(--volt-ink)}
+.qbody label{font-weight:600;font-size:15px;display:grid;gap:6px;margin-bottom:14px}
+.qbody input,.qbody textarea,.qbody select{
+  font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:4px;padding:11px 12px;width:100%;
+}
+.qbody textarea{min-height:88px;resize:vertical}
+.qnav{margin-top:18px;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.qnav .back{background:none;border:none;font:inherit;font-weight:600;color:var(--steel);cursor:pointer;text-decoration:underline;padding:6px}
+.qnav .back:hover{color:var(--ink)}
+.q-emergency{
+  display:none;
+  margin-top:14px;
+  background:var(--volt);
+  color:var(--volt-ink);
+  border-radius:4px;
+  padding:12px 14px;
+  font-size:15px;
+  font-weight:600;
+}
+.q-emergency.show{display:block}
+.q-emergency a{white-space:nowrap}
+.qdone{text-align:left}
+.qdone h3{font-family:var(--disp);font-weight:700;font-size:28px;line-height:1.05}
+.qdone p{margin-top:10px;color:var(--steel);font-size:15.5px}
+.qdone .summary{
+  margin-top:16px;background:var(--paper);border:1px solid var(--line);
+  border-left:5px solid var(--volt);border-radius:4px;padding:14px 16px;font-size:15px;
+}
+.qdone .summary b{font-family:var(--disp);font-size:17px;letter-spacing:.03em}
+.err{color:#B3261E;font-size:14px;margin-top:8px;display:none}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .err{color:#ff8a80}
+}
+.err.show{display:block}
+
+/* ---------- trust strip ---------- */
+.trust{border-bottom:1px solid var(--line)}
+.trust .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.trust .cell{padding:22px 18px;border-left:1px solid var(--line);font-size:15px;color:var(--steel)}
+.trust .cell:first-child{border-left:0;padding-left:0}
+.trust .cell b{
+  display:block;font-family:var(--disp);font-weight:700;font-size:20px;
+  letter-spacing:.03em;color:var(--ink);margin-bottom:2px;
+}
+@media (max-width:760px){
+  .trust .wrap{grid-template-columns:1fr 1fr}
+  .trust .cell{border-left:0;padding-left:0}
+}
+
+/* ---------- sections ---------- */
+section{padding:60px 0}
+.sec-head{margin-bottom:32px;max-width:62ch}
+.sec-head h2{font-family:var(--disp);font-weight:700;font-size:clamp(32px,4.5vw,46px);line-height:1.02}
+.sec-head p{margin-top:10px;color:var(--steel)}
+
+/* ---------- panel schedule ---------- */
+.panel{background:var(--panel);border:2px solid var(--ink);border-radius:var(--radius);overflow:hidden}
+.panel-title{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:var(--ink);color:var(--paper);
+  font-family:var(--disp);font-weight:600;font-size:16px;
+  letter-spacing:.10em;text-transform:uppercase;padding:10px 18px;
+}
+.panel-title .dot{width:10px;height:10px;border-radius:50%;background:var(--volt);flex:none}
+.circuits{display:grid;grid-template-columns:1fr 1fr}
+.circuit{display:flex;gap:16px;padding:22px 20px;border-top:1px solid var(--line)}
+.circuit:nth-child(1),.circuit:nth-child(2){border-top:0}
+.circuit:nth-child(odd){border-right:1px solid var(--line)}
+.tag{
+  flex:none;width:44px;height:44px;background:var(--volt);color:var(--volt-ink);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:19px;
+}
+.circuit h3{font-family:var(--disp);font-weight:700;font-size:23px;letter-spacing:.02em;line-height:1.1}
+.circuit p{margin-top:6px;font-size:15.5px;color:var(--steel)}
+@media (max-width:760px){
+  .circuits{grid-template-columns:1fr}
+  .circuit:nth-child(odd){border-right:0}
+  .circuit:nth-child(2){border-top:1px solid var(--line)}
+}
+.panel-foot{
+  border-top:1px solid var(--line);padding:16px 20px;
+  display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+  font-size:15px;color:var(--steel);
+}
+
+/* ---------- service area / about ---------- */
+.area{border-top:1px solid var(--line)}
+.area-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:start}
+@media (max-width:820px){.area-grid{grid-template-columns:1fr}}
+.towns{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.town{
+  font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.03em;
+  padding:9px 16px;border:2px solid var(--ink);border-radius:999px;
+}
+.town.home{background:var(--volt);border-color:var(--volt);color:var(--volt-ink)}
+.area p.note{margin-top:18px;color:var(--steel);font-size:15.5px;max-width:52ch}
+.about-card{
+  background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--volt);
+  border-radius:var(--radius);padding:26px 26px 28px;
+}
+.about-card h3{font-family:var(--disp);font-weight:700;font-size:26px;line-height:1.05}
+.about-card p{margin-top:12px;color:var(--steel);font-size:16px}
+.about-card p b{color:var(--ink)}
+
+/* ---------- FAQ ---------- */
+.faq{border-top:1px solid var(--line)}
+.faq details{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);margin-bottom:12px}
+.faq summary{
+  cursor:pointer;list-style:none;padding:16px 18px;
+  font-family:var(--disp);font-weight:700;font-size:21px;letter-spacing:.02em;
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:24px;color:var(--steel);flex:none}
+.faq details[open] summary::after{content:"–"}
+.faq .a{padding:0 18px 18px;color:var(--steel);font-size:16px;max-width:70ch}
+
+/* ---------- contact ---------- */
+.contact{border-top:1px solid var(--line)}
+.contact .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+@media (max-width:820px){.contact .wrap{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.contact .wrap{grid-template-columns:1fr}}
+.contact b{font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.03em;display:block}
+.contact div{font-size:16px;color:var(--steel)}
+.contact a{text-decoration:none;color:var(--ink)}
+.contact a:hover{text-decoration:underline}
+
+/* ---------- footer ---------- */
+footer{border-top:2px solid var(--ink);padding:28px 0 40px;font-size:14.5px;color:var(--steel)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="strip">
+  <div class="wrap">
+    <span>24/7 emergency electrical service — North Alabama</span>
+    <a href="tel:+17207372207">Call Justin: (720) 737-2207</a>
+  </div>
+</div>
+
+<header>
+  <div class="wrap hd">
+    <a class="brand" href="#" id="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M13.5 1 3.8 13.6h5.4L9.9 23l9.8-12.9h-5.5z"/></svg>
+      </span>
+      <img id="logo" src="https://img1.wsimg.com/isteam/ip/92960140-a017-4a6c-8499-a5f9ccc69f4d/blob-bbffa49.png" alt="Stencel Electric LLC logo">
+      <span>
+        <span class="brand-name">Stencel Electric LLC</span><br>
+        <span class="brand-sub">Brownsboro, Alabama</span>
+      </span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#area">Service area</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-volt" href="tel:+17207372207">Call now</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>Your Huntsville electrician. Wired right the first time.</h1>
+      <p class="lede">Residential and commercial electrical work across <strong>Huntsville, Madison, and all of Madison County</strong> — done by the owner, not a rotating crew. Repairs, panel upgrades, lighting, new installs, and emergencies at 2&nbsp;a.m.</p>
+      <div class="hero-cta">
+        <a class="btn btn-volt" href="tel:+17207372207">Call (720) 737-2207</a>
+        <span class="hero-note">Justin answers his own phone.</span>
+      </div>
+      <div class="hero-points">
+        <div><span class="bolt">AL</span><span>Licensed &amp; insured Alabama electrical contractor</span></div>
+        <div><span class="bolt">1</span><span>Owner-operated — the person you call does the work</span></div>
+        <div><span class="bolt">24/7</span><span>Emergency service nights, weekends, and holidays</span></div>
+      </div>
+    </div>
+
+    <form class="qform" id="qform" novalidate aria-label="Free quote request">
+      <div class="qform-head">
+        <h2>Free quote in 60 seconds</h2>
+        <span class="qform-step-label" id="stepLabel">Step 1 of 3</span>
+      </div>
+      <div class="qbar"><div class="qbar-fill" id="qbar"></div></div>
+      <div class="qbody">
+
+        <div class="step active" data-step="1">
+          <p class="qtitle">What do you need done?</p>
+          <div class="choices" id="serviceChoices">
+            <button type="button" class="choice" data-value="Electrical repair"><span class="ico">01</span>Repair — something's broken</button>
+            <button type="button" class="choice" data-value="Panel upgrade or new circuit"><span class="ico">02</span>Panel upgrade / new circuit</button>
+            <button type="button" class="choice" data-value="Lighting installation"><span class="ico">03</span>Lighting installation</button>
+            <button type="button" class="choice" data-value="Commercial project"><span class="ico">04</span>Commercial project</button>
+            <button type="button" class="choice" data-value="Safety inspection"><span class="ico">05</span>Safety inspection</button>
+            <button type="button" class="choice" data-value="Emergency"><span class="ico">06</span>Emergency — it can't wait</button>
+          </div>
+          <p class="q-emergency" id="emNote">If this is urgent, skip the form — <a href="tel:+17207372207">call (720) 737-2207 right now</a>. Otherwise, keep going.</p>
+          <p class="err" id="err1">Pick the option closest to your situation.</p>
+        </div>
+
+        <div class="step" data-step="2">
+          <p class="qtitle">Where and when?</p>
+          <label>City
+            <select name="city" id="fCity">
+              <option value="">Choose a city</option>
+              <option>Huntsville</option>
+              <option>Madison</option>
+              <option>Brownsboro</option>
+              <option>Guntersville</option>
+              <option>Scottsboro</option>
+              <option>Somewhere else nearby</option>
+            </select>
+          </label>
+          <p class="qtitle" style="font-size:19px;margin-bottom:10px">How soon do you need it?</p>
+          <div class="choices" id="whenChoices">
+            <button type="button" class="choice" data-value="As soon as possible">As soon as possible</button>
+            <button type="button" class="choice" data-value="This week">This week</button>
+            <button type="button" class="choice" data-value="In the next month">In the next month</button>
+            <button type="button" class="choice" data-value="Just planning">Just planning ahead</button>
+          </div>
+          <p class="err" id="err2">Choose a city and a timeframe.</p>
+        </div>
+
+        <div class="step" data-step="3">
+          <p class="qtitle">Where should Justin send your quote?</p>
+          <label>Name
+            <input type="text" name="name" id="fName" autocomplete="name">
+          </label>
+          <label>Phone
+            <input type="tel" name="phone" id="fPhone" autocomplete="tel">
+          </label>
+          <label>Anything else worth knowing? (optional)
+            <textarea name="details" id="fDetails" placeholder="Example: half the kitchen outlets are dead and the breaker won't reset."></textarea>
+          </label>
+          <p class="err" id="err3">Add your name and a phone number so Justin can reach you.</p>
+        </div>
+
+        <div class="step" data-step="4">
+          <div class="qdone">
+            <h3>Got it. Justin will call you back.</h3>
+            <p>Usually the same day. If it's urgent, don't wait on us — call <a href="tel:+17207372207">(720) 737-2207</a>.</p>
+            <div class="summary" id="qsummary"></div>
+            <p style="margin-top:14px;font-size:13.5px">Design preview: on the live site this request goes straight to Justin's phone and email.</p>
+          </div>
+        </div>
+
+        <div class="qnav" id="qnav">
+          <button type="button" class="back" id="backBtn" hidden>Back</button>
+          <button type="button" class="btn btn-volt" id="nextBtn" style="margin-left:auto">Next</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div class="trust">
+  <div class="wrap">
+    <div class="cell"><b>Licensed &amp; insured</b>Alabama electrical contractor</div>
+    <div class="cell"><b>Owner-operated</b>The person you call does the work</div>
+    <div class="cell"><b>Commercial-grade</b>Commercial experience on every home job</div>
+    <div class="cell"><b>24/7 emergencies</b>Nights, weekends, holidays</div>
+  </div>
+</div>
+
+<section id="services">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Electrical services in Huntsville &amp; Madison County</h2>
+      <p>Laid out like a breaker schedule, because that's how we think about your building: every circuit accounted for.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>Stencel Electric — service directory</span><span class="dot" aria-hidden="true"></span></div>
+      <div class="circuits">
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">01</span>
+          <div>
+            <h3>Electrical repairs</h3>
+            <p>Faulty wiring, dead outlets, tripping breakers, flickering lights — diagnosed fast and fixed properly.</p>
+          </div>
+        </div>
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">02</span>
+          <div>
+            <h3>Panel upgrades &amp; installs</h3>
+            <p>Panel replacements, service upgrades, new circuits, EV charger and appliance hookups.</p>
+          </div>
+        </div>
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">03</span>
+          <div>
+            <h3>Lighting installation</h3>
+            <p>Interior, exterior, and landscape lighting designed and installed for homes, offices, and storefronts.</p>
+          </div>
+        </div>
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">04</span>
+          <div>
+            <h3>Commercial electrical</h3>
+            <p>Build-outs, maintenance, and repairs for offices, retail, and light industrial — on schedule and on budget.</p>
+          </div>
+        </div>
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">05</span>
+          <div>
+            <h3>Safety inspections</h3>
+            <p>Whole-property inspections that catch hazards and code issues before they become expensive ones.</p>
+          </div>
+        </div>
+        <div class="circuit">
+          <span class="tag" aria-hidden="true">06</span>
+          <div>
+            <h3>Emergency service, 24/7</h3>
+            <p>Power out, burning smell, sparking outlet? Call any hour. If it can't wait, neither do we.</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel-foot">
+        <span>Not sure which circuit your problem is on? Describe it and Justin will tell you.</span>
+        <a class="btn btn-volt" href="#qform">Get a free estimate</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="area" class="area">
+  <div class="wrap area-grid">
+    <div>
+      <div class="sec-head" style="margin-bottom:18px">
+        <h2>Where we work</h2>
+        <p>Based in Brownsboro, serving Madison County and the surrounding area.</p>
+      </div>
+      <div class="towns">
+        <span class="town home">Brownsboro — home base</span>
+        <span class="town">Huntsville</span>
+        <span class="town">Madison</span>
+        <span class="town">Guntersville</span>
+        <span class="town">Scottsboro</span>
+        <span class="town">Madison County</span>
+      </div>
+      <p class="note">Outside these areas? Call anyway — for the right job, the truck goes where the work is.</p>
+    </div>
+    <div class="about-card">
+      <h3>Who shows up: Justin Stencel</h3>
+      <p>Stencel Electric is a one-owner shop. Justin is a <b>commercial electrician by trade</b>, which means the wiring in your house gets the same standard as a job that has to pass a commercial inspection.</p>
+      <p>No sales quotas, no mystery techs, no surprise line items. You get a clear price, a clean job site, and a phone number that reaches the actual electrician.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Questions people actually ask</h2>
+    </div>
+    <details>
+      <summary>How much does an electrician cost in Huntsville?</summary>
+      <p class="a">It depends on the job, which is why every quote here is free and specific. Small repairs are usually a service call plus parts; panel upgrades and larger installs get a written estimate before any work starts. No surprise line items.</p>
+    </details>
+    <details>
+      <summary>Do you handle emergencies at night or on weekends?</summary>
+      <p class="a">Yes — 24/7. If you smell burning, see sparking, or lost power to part of your home, call (720) 737-2207 right away instead of using the form.</p>
+    </details>
+    <details>
+      <summary>Are you licensed and insured in Alabama?</summary>
+      <p class="a">Yes. Stencel Electric is a licensed and insured Alabama electrical contractor, and all work is done to current code.</p>
+    </details>
+    <details>
+      <summary>Do you do both houses and commercial buildings?</summary>
+      <p class="a">Both. Justin's background is commercial electrical work, and that same standard carries into residential jobs — from a single outlet to a full build-out.</p>
+    </details>
+  </div>
+</section>
+
+<section class="contact">
+  <div class="wrap">
+    <div><b>Phone</b><a href="tel:+17207372207">(720) 737-2207</a></div>
+    <div><b>Shop</b>204 Cheval Cir SE, Brownsboro, AL 35741</div>
+    <div><b>Hours</b>Mon–Sat, 7am–6pm<br>Emergencies 24/7</div>
+    <div><b>Facebook</b><a href="https://www.facebook.com/109804492092110" rel="noopener">Stencel Electric LLC</a></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Stencel Electric LLC · Brownsboro, Alabama</span>
+    <span><a href="tel:+17207372207">(720) 737-2207</a> · AL Electrical Contractor Lic. #07654</span>
+  </div>
+</footer>
+
+<script>
+// Logo fallback: if the hosted logo can't load, show the bolt mark instead.
+(function(){
+  var img = document.getElementById('logo');
+  var brand = document.getElementById('brand');
+  function fallback(){ img.remove(); brand.classList.add('fallback'); }
+  img.addEventListener('error', fallback);
+  if (img.complete && img.naturalWidth === 0) fallback();
+})();
+
+// ---------- Multi-step quote form ----------
+(function(){
+  var state = { service:"", city:"", when:"", name:"", phone:"", details:"" };
+  var current = 1, total = 3;
+  var steps = document.querySelectorAll('.step');
+  var bar = document.getElementById('qbar');
+  var label = document.getElementById('stepLabel');
+  var nextBtn = document.getElementById('nextBtn');
+  var backBtn = document.getElementById('backBtn');
+  var nav = document.getElementById('qnav');
+
+  function pickGroup(containerId, key, after){
+    var box = document.getElementById(containerId);
+    box.addEventListener('click', function(e){
+      var btn = e.target.closest('.choice');
+      if(!btn) return;
+      box.querySelectorAll('.choice').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      state[key] = btn.dataset.value;
+      if(after) after(btn.dataset.value);
+    });
+  }
+  pickGroup('serviceChoices','service', function(val){
+    document.getElementById('emNote').classList.toggle('show', val === 'Emergency');
+    document.getElementById('err1').classList.remove('show');
+  });
+  pickGroup('whenChoices','when', function(){
+    document.getElementById('err2').classList.remove('show');
+  });
+
+  function show(step){
+    current = step;
+    steps.forEach(function(s){ s.classList.toggle('active', +s.dataset.step === step); });
+    if(step <= total){
+      label.textContent = 'Step ' + step + ' of ' + total;
+      bar.style.width = (step/total*100) + '%';
+      nextBtn.textContent = (step === total) ? 'Send request' : 'Next';
+      backBtn.hidden = (step === 1);
+      nav.style.display = 'flex';
+    } else {
+      label.textContent = 'Done';
+      bar.style.width = '100%';
+      nav.style.display = 'none';
+    }
+  }
+
+  function valid(step){
+    if(step === 1){
+      var ok = !!state.service;
+      document.getElementById('err1').classList.toggle('show', !ok);
+      return ok;
+    }
+    if(step === 2){
+      state.city = document.getElementById('fCity').value;
+      var ok2 = !!state.city && !!state.when;
+      document.getElementById('err2').classList.toggle('show', !ok2);
+      return ok2;
+    }
+    if(step === 3){
+      state.name = document.getElementById('fName').value.trim();
+      state.phone = document.getElementById('fPhone').value.trim();
+      state.details = document.getElementById('fDetails').value.trim();
+      var ok3 = state.name.length > 1 && state.phone.length > 6;
+      document.getElementById('err3').classList.toggle('show', !ok3);
+      return ok3;
+    }
+    return true;
+  }
+
+  nextBtn.addEventListener('click', function(){
+    if(!valid(current)) return;
+    if(current < total){ show(current + 1); return; }
+    // "Send": demo preview — render summary
+    var sum = document.getElementById('qsummary');
+    sum.innerHTML = '<b>' + esc(state.service) + '</b><br>' +
+      esc(state.city) + ' · ' + esc(state.when) + '<br>' +
+      esc(state.name) + ' — ' + esc(state.phone) +
+      (state.details ? '<br>\"' + esc(state.details) + '\"' : '');
+    show(4);
+  });
+  backBtn.addEventListener('click', function(){ if(current > 1) show(current - 1); });
+
+  function esc(s){
+    return String(s).replace(/[&<>\"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  show(1);
+})();
+</script>
+
+</body>
+</html>

@@ -28,5 +28,11 @@
     "name": "Area Caller",
     "description": "Outbound acquisition list of local service trades around any town \u2014 no-website leads first, Google review count as the established-business proxy. Shares route-caller's Worker + D1.",
     "thumbnail": "./demos/area-caller/assets/thumbnail.svg"
+  },
+  {
+    "slug": "stencel-electric",
+    "name": "Stencel Electric",
+    "description": "Client pitch: homepage redesign for a Huntsville-area electrician \u2014 multi-step quote form, panel-schedule services layout, local SEO structure.",
+    "thumbnail": "./demos/stencel-electric/assets/thumbnail.svg"
   }
 ]
