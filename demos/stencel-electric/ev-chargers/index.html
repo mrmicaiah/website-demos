@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Charger Installation in Huntsville, AL — Stencel Electric</title>
+<meta name="description" content="Level 2 EV charger installation for homes and businesses in Huntsville, Madison, and Madison County, AL. Any brand — Tesla, ChargePoint, Emporia, and more. Panel checked, permit handled, done to code. Call Justin: (720) 737-2207.">
+<link rel="canonical" href="https://stencelelectric.com/ev-charger-installation">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "EV charger installation",
+  "provider": {
+    "@type": "Electrician",
+    "name": "Stencel Electric LLC",
+    "telephone": "+1-720-737-2207",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "204 Cheval Cir SE",
+      "addressLocality": "Brownsboro",
+      "addressRegion": "AL",
+      "postalCode": "35741",
+      "addressCountry": "US"
+    }
+  },
+  "areaServed": [
+    {"@type": "City", "name": "Huntsville"},
+    {"@type": "City", "name": "Madison"},
+    {"@type": "City", "name": "Brownsboro"},
+    {"@type": "City", "name": "Guntersville"},
+    {"@type": "City", "name": "Scottsboro"}
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F4EC;
+  --panel:#FFFFFF;
+  --ink:#26241C;
+  --steel:#6A6455;
+  --line:#DEDACB;
+  --volt:#FFD200;
+  --volt-ink:#26241C;
+  --radius:6px;
+  --disp:"Barlow Condensed", "Arial Narrow", sans-serif;
+  --body:"Barlow", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1D1B14;
+    --panel:#2A2820;
+    --ink:#EFEDE2;
+    --steel:#A6A08F;
+    --line:#3B382E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1D1B14;
+  --panel:#2A2820;
+  --ink:#EFEDE2;
+  --steel:#A6A08F;
+  --line:#3B382E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *{animation:none !important;transition:none !important}
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+a{color:inherit}
+img{max-width:100%}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:3px solid var(--volt);outline-offset:2px;
+}
+
+/* ---------- caution strip ---------- */
+.strip{
+  background:var(--volt);color:var(--volt-ink);
+  font-family:var(--disp);font-weight:700;font-size:15px;
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.strip .wrap{display:flex;justify-content:space-between;gap:12px;padding:7px 20px}
+.strip a{text-decoration:none;white-space:nowrap}
+.strip a:hover{text-decoration:underline}
+@media (max-width:560px){.strip .wrap{justify-content:center}.strip span{display:none}}
+
+/* ---------- header ---------- */
+header{background:var(--paper);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;gap:16px;padding:14px 20px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand img{height:48px;width:auto;display:block}
+.mark{
+  width:42px;height:42px;flex:none;background:var(--ink);border-radius:var(--radius);
+  display:none;align-items:center;justify-content:center;
+}
+.mark svg{width:22px;height:22px;fill:var(--volt)}
+.brand.fallback .mark{display:flex}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:24px;line-height:1;letter-spacing:.02em}
+.brand-sub{font-size:12.5px;color:var(--steel);letter-spacing:.04em}
+.hd nav{margin-left:auto;display:flex;gap:24px;font-weight:500;font-size:15.5px}
+.hd nav a{text-decoration:none;color:var(--steel)}
+.hd nav a:hover{color:var(--ink)}
+@media (max-width:760px){.hd nav{display:none}}
+.btn{
+  display:inline-block;font-family:var(--disp);font-weight:700;font-size:18px;
+  letter-spacing:.04em;text-transform:uppercase;text-decoration:none;
+  padding:11px 20px 12px;border-radius:var(--radius);border:2px solid var(--ink);
+  cursor:pointer;background:transparent;color:var(--ink);
+}
+.btn-volt{background:var(--volt);color:var(--volt-ink);border-color:var(--volt)}
+.btn-volt:hover{filter:brightness(1.05)}
+.hd .btn{margin-left:auto}
+@media (min-width:761px){.hd .btn{margin-left:0}}
+
+/* ---------- hero with form ---------- */
+.hero{padding:52px 0 56px;border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:start}
+@media (max-width:880px){.hero-grid{grid-template-columns:1fr;gap:36px}}
+.crumb{font-size:14px;color:var(--steel);margin-bottom:14px}
+.crumb a{text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.hero h1{
+  font-family:var(--disp);font-weight:700;
+  font-size:clamp(40px, 6.2vw, 68px);line-height:.97;letter-spacing:.005em;
+}
+.hero .lede{margin-top:20px;max-width:52ch;font-size:18.5px;color:var(--steel)}
+.hero .lede strong{color:var(--ink);font-weight:600}
+.hero-cta{margin-top:26px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.hero-note{font-size:14.5px;color:var(--steel)}
+.hero-points{margin-top:34px;display:grid;gap:10px;font-size:15.5px;color:var(--steel)}
+.hero-points div{display:flex;gap:10px;align-items:baseline}
+.hero-points .bolt{
+  color:var(--volt-ink);background:var(--volt);border-radius:3px;
+  font-family:var(--disp);font-weight:700;font-size:13px;padding:1px 7px 2px;flex:none;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .hero-points .bolt{color:#26241C}
+}
+
+/* ---------- multi-step form ---------- */
+.qform{
+  background:var(--panel);border:2px solid var(--ink);border-radius:var(--radius);
+  overflow:hidden;box-shadow:6px 6px 0 var(--volt);
+}
+.qform-head{
+  background:var(--ink);color:var(--paper);padding:14px 20px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.qform-head h2{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.04em}
+.qform-step-label{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.08em;color:var(--volt)}
+.qbar{height:6px;background:var(--line)}
+.qbar-fill{height:100%;background:var(--volt);width:33.4%;transition:width .25s ease}
+.qbody{padding:22px 20px 24px}
+.qtitle{font-family:var(--disp);font-weight:700;font-size:24px;line-height:1.05;margin-bottom:16px}
+.step{display:none}
+.step.active{display:block}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.choices{grid-template-columns:1fr}}
+.choice{
+  border:2px solid var(--line);border-radius:var(--radius);background:var(--paper);
+  padding:13px 14px;font:inherit;font-weight:600;font-size:15.5px;color:var(--ink);
+  text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center;
+}
+.choice:hover{border-color:var(--steel)}
+.choice[aria-pressed="true"]{border-color:var(--ink);background:var(--volt);color:var(--volt-ink)}
+.qbody label{font-weight:600;font-size:15px;display:grid;gap:6px;margin-bottom:14px}
+.qbody input,.qbody textarea,.qbody select{
+  font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:4px;padding:11px 12px;width:100%;
+}
+.qbody textarea{min-height:88px;resize:vertical}
+.qnav{margin-top:18px;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.qnav .back{background:none;border:none;font:inherit;font-weight:600;color:var(--steel);cursor:pointer;text-decoration:underline;padding:6px}
+.qnav .back:hover{color:var(--ink)}
+.qdone h3{font-family:var(--disp);font-weight:700;font-size:28px;line-height:1.05}
+.qdone p{margin-top:10px;color:var(--steel);font-size:15.5px}
+.qdone .summary{
+  margin-top:16px;background:var(--paper);border:1px solid var(--line);
+  border-left:5px solid var(--volt);border-radius:4px;padding:14px 16px;font-size:15px;
+}
+.qdone .summary b{font-family:var(--disp);font-size:17px;letter-spacing:.03em}
+.err{color:#B3261E;font-size:14px;margin-top:8px;display:none}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .err{color:#ff8a80}
+}
+.err.show{display:block}
+
+/* ---------- trust strip ---------- */
+.trust{border-bottom:1px solid var(--line)}
+.trust .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.trust .cell{padding:22px 18px;border-left:1px solid var(--line);font-size:15px;color:var(--steel)}
+.trust .cell:first-child{border-left:0;padding-left:0}
+.trust .cell b{
+  display:block;font-family:var(--disp);font-weight:700;font-size:20px;
+  letter-spacing:.03em;color:var(--ink);margin-bottom:2px;
+}
+@media (max-width:760px){
+  .trust .wrap{grid-template-columns:1fr 1fr}
+  .trust .cell{border-left:0;padding-left:0}
+}
+
+/* ---------- sections ---------- */
+section{padding:60px 0}
+.sec-head{margin-bottom:32px;max-width:64ch}
+.sec-head h2{font-family:var(--disp);font-weight:700;font-size:clamp(32px,4.5vw,46px);line-height:1.02}
+.sec-head p{margin-top:10px;color:var(--steel)}
+
+/* ---------- charge-speed panel ---------- */
+.panel{background:var(--panel);border:2px solid var(--ink);border-radius:var(--radius);overflow:hidden}
+.panel-title{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:var(--ink);color:var(--paper);
+  font-family:var(--disp);font-weight:600;font-size:16px;
+  letter-spacing:.10em;text-transform:uppercase;padding:10px 18px;
+}
+.panel-title .dot{width:10px;height:10px;border-radius:50%;background:var(--volt);flex:none}
+.lvl{display:flex;gap:16px;padding:22px 20px;border-top:1px solid var(--line)}
+.lvl:first-of-type{border-top:0}
+.tag{
+  flex:none;width:54px;height:44px;background:var(--volt);color:var(--volt-ink);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:19px;
+}
+.tag.dim{background:var(--line);color:var(--steel)}
+.lvl h3{font-family:var(--disp);font-weight:700;font-size:23px;letter-spacing:.02em;line-height:1.1}
+.lvl p{margin-top:6px;font-size:15.5px;color:var(--steel)}
+.lvl p b{color:var(--ink)}
+.panel-foot{
+  border-top:1px solid var(--line);padding:16px 20px;
+  display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+  font-size:15px;color:var(--steel);
+}
+
+/* ---------- price factors ---------- */
+.factors{border-top:1px solid var(--line)}
+.fact-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:760px){.fact-grid{grid-template-columns:1fr}}
+.fact{
+  background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--volt);
+  border-radius:var(--radius);padding:20px 22px;
+}
+.fact h3{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.02em}
+.fact p{margin-top:6px;font-size:15.5px;color:var(--steel)}
+
+/* ---------- process ---------- */
+.process{border-top:1px solid var(--line)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media (max-width:860px){.steps{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+.pstep .n{
+  width:44px;height:44px;background:var(--volt);color:var(--volt-ink);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:20px;margin-bottom:12px;
+}
+.pstep h3{font-family:var(--disp);font-weight:700;font-size:21px;letter-spacing:.02em}
+.pstep p{margin-top:6px;font-size:15px;color:var(--steel)}
+
+/* ---------- FAQ ---------- */
+.faq{border-top:1px solid var(--line)}
+.faq details{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);margin-bottom:12px}
+.faq summary{
+  cursor:pointer;list-style:none;padding:16px 18px;
+  font-family:var(--disp);font-weight:700;font-size:21px;letter-spacing:.02em;
+  display:flex;justify-content:space-between;gap:12px;align-items:center;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:24px;color:var(--steel);flex:none}
+.faq details[open] summary::after{content:"–"}
+.faq .a{padding:0 18px 18px;color:var(--steel);font-size:16px;max-width:70ch}
+
+/* ---------- contact / footer ---------- */
+.contact{border-top:1px solid var(--line)}
+.contact .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+@media (max-width:820px){.contact .wrap{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.contact .wrap{grid-template-columns:1fr}}
+.contact b{font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.03em;display:block}
+.contact div{font-size:16px;color:var(--steel)}
+.contact a{text-decoration:none;color:var(--ink)}
+.contact a:hover{text-decoration:underline}
+footer{border-top:2px solid var(--ink);padding:28px 0 40px;font-size:14.5px;color:var(--steel)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="strip">
+  <div class="wrap">
+    <span>EV charger installs — Huntsville &amp; Madison County</span>
+    <a href="tel:+17207372207">Call Justin: (720) 737-2207</a>
+  </div>
+</div>
+
+<header>
+  <div class="wrap hd">
+    <a class="brand" href="../" id="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M13.5 1 3.8 13.6h5.4L9.9 23l9.8-12.9h-5.5z"/></svg>
+      </span>
+      <img id="logo" src="https://img1.wsimg.com/isteam/ip/92960140-a017-4a6c-8499-a5f9ccc69f4d/blob-bbffa49.png" referrerpolicy="no-referrer" alt="Stencel Electric LLC logo">
+      <span>
+        <span class="brand-name">Stencel Electric LLC</span><br>
+        <span class="brand-sub">Brownsboro, Alabama</span>
+      </span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#speeds">Charging speeds</a>
+      <a href="#pricing">What sets the price</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-volt" href="tel:+17207372207">Call now</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="crumb"><a href="../">Stencel Electric</a> / EV charger installation</p>
+      <h1>Plug in at home. Wake up on a full charge.</h1>
+      <p class="lede">Level 2 EV charger installation for <strong>Huntsville, Madison, and all of Madison County</strong> — any brand, any vehicle. Justin checks your panel, pulls the permit, and wires it to code, so the only thing you think about is which cable reaches the driveway.</p>
+      <div class="hero-cta">
+        <a class="btn btn-volt" href="tel:+17207372207">Call (720) 737-2207</a>
+        <span class="hero-note">Free estimates. Justin answers his own phone.</span>
+      </div>
+      <div class="hero-points">
+        <div><span class="bolt">240V</span><span>Level 2 installs — roughly 6–10× faster than a wall outlet</span></div>
+        <div><span class="bolt">ANY</span><span>Tesla, ChargePoint, Emporia, JuiceBox, and every other brand</span></div>
+        <div><span class="bolt">CODE</span><span>Panel assessed, permit handled, inspection passed</span></div>
+      </div>
+    </div>
+
+    <form class="qform" id="qform" novalidate aria-label="EV charger quote request">
+      <div class="qform-head">
+        <h2>EV install quote in 60 seconds</h2>
+        <span class="qform-step-label" id="stepLabel">Step 1 of 3</span>
+      </div>
+      <div class="qbar"><div class="qbar-fill" id="qbar"></div></div>
+      <div class="qbody">
+
+        <div class="step active" data-step="1">
+          <p class="qtitle">Where are you starting from?</p>
+          <div class="choices" id="setupChoices">
+            <button type="button" class="choice" data-value="Have a charger, need it installed">Already have the charger</button>
+            <button type="button" class="choice" data-value="Need charger recommendation + install">Need charger + install</button>
+            <button type="button" class="choice" data-value="Not sure what I need yet">Not sure what I need yet</button>
+            <button type="button" class="choice" data-value="Business / fleet charging">Business or fleet charging</button>
+          </div>
+          <p class="err" id="err1">Pick whichever is closest — Justin sorts out the rest.</p>
+        </div>
+
+        <div class="step" data-step="2">
+          <p class="qtitle">Where's the charger going?</p>
+          <div class="choices" id="parkChoices">
+            <button type="button" class="choice" data-value="Garage">Garage</button>
+            <button type="button" class="choice" data-value="Carport">Carport</button>
+            <button type="button" class="choice" data-value="Driveway / outdoor">Driveway / outdoor</button>
+            <button type="button" class="choice" data-value="Business parking">Business parking</button>
+          </div>
+          <label style="margin-top:16px">City
+            <select name="city" id="fCity">
+              <option value="">Choose a city</option>
+              <option>Huntsville</option>
+              <option>Madison</option>
+              <option>Brownsboro</option>
+              <option>Guntersville</option>
+              <option>Scottsboro</option>
+              <option>Somewhere else nearby</option>
+            </select>
+          </label>
+          <p class="err" id="err2">Choose a spot and a city.</p>
+        </div>
+
+        <div class="step" data-step="3">
+          <p class="qtitle">Where should Justin send your quote?</p>
+          <label>Name
+            <input type="text" name="name" id="fName" autocomplete="name">
+          </label>
+          <label>Phone
+            <input type="tel" name="phone" id="fPhone" autocomplete="tel">
+          </label>
+          <label>Anything else? (car model, charger brand, panel age…)
+            <textarea name="details" id="fDetails" placeholder="Example: Model Y, Tesla Wall Connector, house built in 1998."></textarea>
+          </label>
+          <p class="err" id="err3">Add your name and a phone number so Justin can reach you.</p>
+        </div>
+
+        <div class="step" data-step="4">
+          <div class="qdone">
+            <h3>Got it. Justin will call you back.</h3>
+            <p>Usually the same day, with real numbers — not a "starting at" teaser. Urgent? Call <a href="tel:+17207372207">(720) 737-2207</a>.</p>
+            <div class="summary" id="qsummary"></div>
+            <p style="margin-top:14px;font-size:13.5px">Design preview: on the live site this request goes straight to Justin's phone and email.</p>
+          </div>
+        </div>
+
+        <div class="qnav" id="qnav">
+          <button type="button" class="back" id="backBtn" hidden>Back</button>
+          <button type="button" class="btn btn-volt" id="nextBtn" style="margin-left:auto">Next</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div class="trust">
+  <div class="wrap">
+    <div class="cell"><b>Licensed &amp; insured</b>Alabama electrical contractor</div>
+    <div class="cell"><b>Any charger brand</b>Hardwired or plug-in (NEMA 14-50)</div>
+    <div class="cell"><b>Permit handled</b>Pulled, inspected, passed</div>
+    <div class="cell"><b>Owner-installed</b>Justin does the work himself</div>
+  </div>
+</div>
+
+<section id="speeds">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Why everyone upgrades to Level 2</h2>
+      <p>The charger that came in your trunk plugs into a wall outlet and trickles. A dedicated 240-volt circuit changes the math entirely.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>Home charging — the honest comparison</span><span class="dot" aria-hidden="true"></span></div>
+      <div class="lvl">
+        <span class="tag dim" aria-hidden="true">L1</span>
+        <div>
+          <h3>Level 1 — the wall outlet</h3>
+          <p>Standard 120V outlet, the cord from the trunk. <b>Roughly 3–5 miles of range per hour.</b> An overnight charge barely covers a commute, and a shared garage circuit can trip all night.</p>
+        </div>
+      </div>
+      <div class="lvl">
+        <span class="tag" aria-hidden="true">L2</span>
+        <div>
+          <h3>Level 2 — the dedicated circuit</h3>
+          <p>240V on its own breaker, hardwired or NEMA 14-50 outlet. <b>Roughly 20–40+ miles of range per hour</b> depending on your car and amperage — empty to full while you sleep, every night.</p>
+        </div>
+      </div>
+      <div class="panel-foot">
+        <span>Not sure your panel has room for it? That's the first thing Justin checks — free.</span>
+        <a class="btn btn-volt" href="#qform">Get my quote</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing" class="factors">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>What actually sets the price</h2>
+      <p>No "starting at $399" games. Four things decide what an EV charger install costs, and Justin walks you through each one before any work starts.</p>
+    </div>
+    <div class="fact-grid">
+      <div class="fact">
+        <h3>Your panel's capacity</h3>
+        <p>A Level 2 charger wants a 40–60 amp circuit. Most modern panels have room; older or full panels may need a load calculation, a tandem rearrange, or an upgrade — known before you commit, not discovered mid-job.</p>
+      </div>
+      <div class="fact">
+        <h3>Distance from panel to parking</h3>
+        <p>Wire run is the biggest cost variable. Charger on the wall next to the panel is the easy case; across the house or out to a detached garage means more copper, conduit, and labor.</p>
+      </div>
+      <div class="fact">
+        <h3>Hardwired vs. plug-in</h3>
+        <p>A NEMA 14-50 outlet keeps things flexible; hardwiring is cleaner, often supports higher amperage, and is required by some chargers. Justin will tell you which your charger and usage actually call for.</p>
+      </div>
+      <div class="fact">
+        <h3>Permit &amp; inspection</h3>
+        <p>EV circuits should be permitted and inspected — it protects your home insurance and resale. Stencel handles the paperwork and meets the inspector so you don't have to.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="process">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>How the install goes</h2>
+    </div>
+    <div class="steps">
+      <div class="pstep">
+        <span class="n" aria-hidden="true">1</span>
+        <h3>Quick assessment</h3>
+        <p>A few photos of your panel and parking spot — or a short visit — and Justin knows what the job takes.</p>
+      </div>
+      <div class="pstep">
+        <span class="n" aria-hidden="true">2</span>
+        <h3>Firm quote</h3>
+        <p>One written price covering wire, breaker, labor, and permit. No mid-job surprises.</p>
+      </div>
+      <div class="pstep">
+        <span class="n" aria-hidden="true">3</span>
+        <h3>Install day</h3>
+        <p>Most home installs are done in half a day. Clean run, labeled breaker, charger mounted and tested on your car.</p>
+      </div>
+      <div class="pstep">
+        <span class="n" aria-hidden="true">4</span>
+        <h3>Inspection &amp; done</h3>
+        <p>The permit closes out, you get the paperwork, and your car charges at home from that night on.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>EV charger questions, answered straight</h2>
+    </div>
+    <details>
+      <summary>Can you install a Tesla Wall Connector?</summary>
+      <p class="a">Yes — Tesla Wall Connectors, Universal Wall Connectors, and every major third-party brand (ChargePoint, Emporia, JuiceBox, Grizzl-E, and more). If you haven't bought one yet, Justin will recommend the right unit for your car and panel instead of the most expensive one.</p>
+    </details>
+    <details>
+      <summary>Will my electrical panel need an upgrade?</summary>
+      <p class="a">Often not — many homes have the capacity for a 40–50 amp circuit. When a panel is genuinely full or undersized, you'll know up front with a load calculation, and you'll get options at more than one price point.</p>
+    </details>
+    <details>
+      <summary>How long does the installation take?</summary>
+      <p class="a">A typical garage install with reasonable wire run is a half-day. Long runs, detached garages, or panel work can extend that — your quote will say so before anything starts.</p>
+    </details>
+    <details>
+      <summary>Do you do commercial or fleet charging?</summary>
+      <p class="a">Yes. Justin is a commercial electrician by trade — workplace charging, customer-facing stations, and multi-unit setups are all in scope. Commercial jobs get a site visit and a scoped proposal.</p>
+    </details>
+    <details>
+      <summary>Is a permit really necessary?</summary>
+      <p class="a">A new 240V circuit should be permitted and inspected — it's what keeps your insurance clean and your home sale smooth later. Stencel pulls the permit and handles the inspection as part of the job, not as an extra.</p>
+    </details>
+  </div>
+</section>
+
+<section class="contact">
+  <div class="wrap">
+    <div><b>Phone</b><a href="tel:+17207372207">(720) 737-2207</a></div>
+    <div><b>Shop</b>204 Cheval Cir SE, Brownsboro, AL 35741</div>
+    <div><b>Hours</b>Mon–Sat, 7am–6pm<br>Emergencies 24/7</div>
+    <div><b>All services</b><a href="../">Stencel Electric home</a></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Stencel Electric LLC · Brownsboro, Alabama</span>
+    <span><a href="tel:+17207372207">(720) 737-2207</a> · AL Electrical Contractor Lic. #07654</span>
+  </div>
+</footer>
+
+<script>
+// Logo fallback
+(function(){
+  var img = document.getElementById('logo');
+  var brand = document.getElementById('brand');
+  function fallback(){ img.remove(); brand.classList.add('fallback'); }
+  img.addEventListener('error', fallback);
+  if (img.complete && img.naturalWidth === 0) fallback();
+})();
+
+// Multi-step EV quote form
+(function(){
+  var state = { setup:"", parking:"", city:"", name:"", phone:"", details:"" };
+  var current = 1, total = 3;
+  var steps = document.querySelectorAll('.step');
+  var bar = document.getElementById('qbar');
+  var label = document.getElementById('stepLabel');
+  var nextBtn = document.getElementById('nextBtn');
+  var backBtn = document.getElementById('backBtn');
+  var nav = document.getElementById('qnav');
+
+  function pickGroup(containerId, key, errId){
+    var box = document.getElementById(containerId);
+    box.addEventListener('click', function(e){
+      var btn = e.target.closest('.choice');
+      if(!btn) return;
+      box.querySelectorAll('.choice').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      state[key] = btn.dataset.value;
+      document.getElementById(errId).classList.remove('show');
+    });
+  }
+  pickGroup('setupChoices','setup','err1');
+  pickGroup('parkChoices','parking','err2');
+
+  function show(step){
+    current = step;
+    steps.forEach(function(s){ s.classList.toggle('active', +s.dataset.step === step); });
+    if(step <= total){
+      label.textContent = 'Step ' + step + ' of ' + total;
+      bar.style.width = (step/total*100) + '%';
+      nextBtn.textContent = (step === total) ? 'Send request' : 'Next';
+      backBtn.hidden = (step === 1);
+      nav.style.display = 'flex';
+    } else {
+      label.textContent = 'Done';
+      bar.style.width = '100%';
+      nav.style.display = 'none';
+    }
+  }
+
+  function valid(step){
+    if(step === 1){
+      var ok = !!state.setup;
+      document.getElementById('err1').classList.toggle('show', !ok);
+      return ok;
+    }
+    if(step === 2){
+      state.city = document.getElementById('fCity').value;
+      var ok2 = !!state.parking && !!state.city;
+      document.getElementById('err2').classList.toggle('show', !ok2);
+      return ok2;
+    }
+    if(step === 3){
+      state.name = document.getElementById('fName').value.trim();
+      state.phone = document.getElementById('fPhone').value.trim();
+      state.details = document.getElementById('fDetails').value.trim();
+      var ok3 = state.name.length > 1 && state.phone.length > 6;
+      document.getElementById('err3').classList.toggle('show', !ok3);
+      return ok3;
+    }
+    return true;
+  }
+
+  nextBtn.addEventListener('click', function(){
+    if(!valid(current)) return;
+    if(current < total){ show(current + 1); return; }
+    var sum = document.getElementById('qsummary');
+    sum.innerHTML = '<b>' + esc(state.setup) + '</b><br>' +
+      esc(state.parking) + ' · ' + esc(state.city) + '<br>' +
+      esc(state.name) + ' — ' + esc(state.phone) +
+      (state.details ? '<br>"' + esc(state.details) + '"' : '');
+    show(4);
+  });
+  backBtn.addEventListener('click', function(){ if(current > 1) show(current - 1); });
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  show(1);
+})();
+</script>
+
+</body>
+</html>
